@@ -160,4 +160,4 @@ let interpreter ( (input : string ), (output : string)) : unit =
 
 
 let () =
-  interpreter ("inputa-1.txt", "output.txt")
+  interpreter ("input1-1.txt", "output.txt")
