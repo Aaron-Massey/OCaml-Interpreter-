@@ -11,17 +11,6 @@ let read_lines (filename : string) : string list =
   in
   loop []
 
-let append_line (filename : string) (str : string) : unit = 
-  let oc = open_out_gen [Open_creat; Open_append] 0o666 filename in
-  try
-    output_string oc (str ^ "\n");
-
-    close_out oc 
-  with e ->
-    close_out_noerr oc;
-    raise e
-    
-
   (* Define types for stack values*)
 type stack_value =
   | Int of int
@@ -97,6 +86,8 @@ let write_lines (filename : string) (stack : stack_value list ) : unit =
 (* Main Method*)
 let interpreter ( (input : string ), (output : string)) : unit = 
   let lines = read_lines input in
+  let oc = open_out output in 
+
   
   let rec execute (commands : string list) (stk : stack) : stack = 
     match commands with
@@ -135,12 +126,22 @@ let interpreter ( (input : string ), (output : string)) : unit =
               | _ :: rest -> rest
             )
         | ["add"] -> stk (*stub*)
+        | ["sub"] -> stk (*STUB*)
+        | ["mult"] -> stk (*STUB*)
+        | ["div"] -> stk (*SUB*) 
+        | ["rem"] -> stk (*STUB*)
+        | ["sign"] -> stk (*STUB*)
+        | ["swap"] -> stk (*STUB*)
         | ["toString"] ->
             (match stk with
               |[] -> pushError []
               | v :: rest -> pushStr (to_string v) rest
             )
-        | ["println"] -> stk
+        | ["println"] -> 
+            (match stk with
+            | [] -> pushError [] 
+            | v :: rest -> Printf.fprintf oc "%s\n" (to_string v); rest
+          ) 
         | ["quit"] -> stk
         | _ -> pushError stk
       in
@@ -152,8 +153,8 @@ let interpreter ( (input : string ), (output : string)) : unit =
   let final_stack = execute lines [] in
 
 
-write_lines output final_stack  
-
+  write_lines output final_stack; 
+  close_out oc
 
 
 
