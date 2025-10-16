@@ -248,4 +248,14 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
 (*|        Manually change filenames for now          |*)
 (*-----------------------------------------------------*)
 let () =
-  interpreter ("input10-1.txt", "output.txt")
+  interpreter ("input1-1.txt", "output1.txt");
+  interpreter ("input2-1.txt", "output2.txt");
+  interpreter ("input3-1.txt", "output3.txt");
+  interpreter ("input4-1.txt", "output4.txt");
+  interpreter ("input5-1.txt", "output5.txt");
+  interpreter ("input6-1.txt", "output6.txt");
+  interpreter ("input7-1.txt", "output7.txt");
+  interpreter ("input8-1.txt", "output8.txt");
+  interpreter ("input9-1.txt", "output9.txt");
+  interpreter ("input10-1.txt", "output10.txt");
+
