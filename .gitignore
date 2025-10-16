@@ -1,1 +1,5 @@
+# Linux File
 .directory
+
+# Don't save the Output files
+src/*output*
