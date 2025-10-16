@@ -129,10 +129,10 @@ let push (arg : string) (stk : stack) : stack =
     | _ -> pushError stk
  
 
-let pop (stk: stack) : stack =  (*Aaron Massey*)
+let pop (stk: stack) : stack =  (*Aaron Massey*) (*Might need to rework*)
   match stk with                
-    | [] -> pushError stk       
-    | _ :: rest -> rest         
+    | [] -> pushError stk
+    | _ :: rest -> rest
 
 let add (stk : stack) : stack = (*Aaron Massey*)
   match stk with
@@ -213,36 +213,36 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
   
   let rec execute (commands : string list) (stk : stack) : stack = (*Aaron Massey and Brayden Stille*)
     match commands with
-    | [] -> stk
-    | cmd :: rest ->
-      let trimmed_cmd = String.trim cmd in
-      let tokens = String.split_on_char ' ' trimmed_cmd in 
-      let new_stk = 
+    | [] -> stk (*If there are no commands left return the stack*)
+    | cmd :: rest -> (*If there is a command left, turn it to a string then match it with the function*)
+      let trimmed_cmd = String.trim cmd in (*Trims the whitespace from the command*)
+      let tokens = String.split_on_char ' ' trimmed_cmd in (*tokenizes the command*)
+      let new_stk = (*executes the command and returns the new stack*)
         match tokens with
-        | ["push"; arg] -> push arg stk
-        | ["pop"] -> pop stk
-        | ["add"] -> add stk
-        | ["sub"] -> sub stk
-        | ["mult"] -> mult stk 
-        | ["div"] -> div stk
-        | ["rem"] -> rem stk
-        | ["sign"] -> sign stk
-        | ["swap"] -> swap stk
-        | ["toString"] -> tostring stk
-        | ["println"] -> println stk oc
-        | ["quit"] -> stk
-        | _ -> pushError stk
+        | ["push"; arg] -> push arg stk (*If command is push; push function is called*)
+        | ["pop"] -> pop stk (*If command is pop; pop function is called*)
+        | ["add"] -> add stk (*If command is add; add function is called*)
+        | ["sub"] -> sub stk (*If command is sub; sub function is called*)
+        | ["mult"] -> mult stk (*If command is mult; mult function is called*)
+        | ["div"] -> div stk (*If command is div; div function is called*)
+        | ["rem"] -> rem stk (*If command is rem; rem function is called*)
+        | ["sign"] -> sign stk (*If command is sign; sign function is called*)
+        | ["swap"] -> swap stk (*If command is swap; swap function is called*)
+        | ["toString"] -> tostring stk (*If command is toString; tostring function is called*)
+        | ["println"] -> println stk oc (*If command is println; println function is called*)
+        | ["quit"] -> stk (*If command is quit; return the stack and stop executing*)
+        | _ -> pushError stk (*If command is not recognized; pushError function is called*)
       in
-      if tokens = ["quit"] then 
-        new_stk
-      else 
-        execute rest new_stk
+      if tokens = ["quit"] then (*If command is quit; return the stack and stop executing*)
+        new_stk (*Return the new stack*)
+      else
+        execute rest new_stk (*Continue executing the rest of the commands*)
     in
-  let final_stack = execute lines [] in
+  let final_stack = execute lines [] in (*Start executing the commands with an empty stack*)
 
 
-  write_lines output final_stack; 
-  close_out oc
+  write_lines output final_stack; (*Write the final stack to the output file*)
+  close_out oc (*close output channel*)
 
 (*-----------------------------------------------------*)
 (*|        Manually change filenames for now          |*)
