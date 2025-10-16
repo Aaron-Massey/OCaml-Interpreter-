@@ -21,9 +21,9 @@ type stack = stack_value list  (*Aaron Massey*)
 (*-----------------------------------------------------*) 
 
 
-let is_letter c = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+let is_letter c = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') (*Checks if a character is a letter*)
 
-let is_digit c = c >= '0' && c <= '9'
+let is_digit c = c >= '0' && c <= '9' (*Checks if a character is a digit*)
 
 let is_valid_name (s : string) : bool = (*Aaron Massey*)
   if String.length s = 0 then false (*If the string is empty, it is not a valid name*)
@@ -43,10 +43,10 @@ let is_valid_name (s : string) : bool = (*Aaron Massey*)
     in
     check_rest 1
 
-let is_valid_int (s : string) : bool =
-  match int_of_string_opt s with
-    | Some _ -> true
-    | None -> false
+let is_valid_int (s : string) : bool = (*Brayden Stille*)
+  match int_of_string_opt s with (*Tries to convert the string to an int*)
+    | Some _ -> true (*If string can be converted to an int it will return true*)
+    | None -> false (*If string cannot be converted to an int it will return false*)
 
 
 
@@ -81,14 +81,14 @@ let read_lines (filename : string) : string list = (*Aaron Massey*)
 
 let write_lines (filename : string) (stack : stack) : unit =  (*Aaron Massey*)
 
-  let oc = open_out filename in 
-  try
-    List.iter (fun line -> output_string oc (string_of_stack_value line ^ "\n")) stack;
+  let oc = open_out filename in (*Open the output file*)
+  try 
+    List.iter (fun line -> output_string oc (string_of_stack_value line ^ "\n")) stack; (*Write each line to the output file*)
 
-    close_out oc
+    close_out oc (*Close the output file*)
   with e ->
-    close_out_noerr oc;
-    raise e
+    close_out_noerr oc; (*Close the output file without raising an error*)
+    raise e (*raises the error*)
 
 
 (*-----------------------------------------------------*) 
@@ -114,19 +114,19 @@ let pushError (stk : stack) : stack = (*Brayden Stille*)
 let pushUnit (stk : stack) : stack = (*Brayden Stille*)
   Unit :: stk (*Takes the stack and pushes a Unit onto it*)
 
-let push (arg : string) (stk : stack) : stack = 
-  if String.starts_with ~prefix:"\"" arg && String.ends_with ~suffix:"\"" arg then 
-    let s = String.sub arg 1 (String.length arg - 2) in
-      pushStr s stk
-  else 
-  match arg with 
-    | ":true:" -> pushBool true stk
-    | ":false:" -> pushBool false stk
-    | ":error:" -> pushError stk
-    | ":unit:" -> pushUnit stk
-    | arg when is_valid_name arg -> pushName arg stk
-    | arg when is_valid_int arg -> pushInt (int_of_string arg) stk
-    | _ -> pushError stk
+let push (arg : string) (stk : stack) : stack = (*Brayden Stille*)
+  if String.starts_with ~prefix:"\"" arg && String.ends_with ~suffix:"\"" arg then (*Checks if the argument is wrapped in quotes*)
+    let s = String.sub arg 1 (String.length arg - 2) in (*Removes the quotes from the argument*)
+      pushStr s stk (*Calls the pushStr function with s as the string and the stack as stk*)
+  else
+  match arg with (*matches the push function with the argument*)
+    | ":true:" -> pushBool true stk (*Calls the pushBool function with true and the stack as stk*)
+    | ":false:" -> pushBool false stk (*Calls the pushBool function with false and the stack as stk*)
+    | ":error:" -> pushError stk (*Calls the pushError function with the stack as stk*)
+    | ":unit:" -> pushUnit stk (*Calls the pushUnit function with the stack as stk*)
+    | arg when is_valid_name arg -> pushName arg stk (*Calls the pushName function with arg as the name and the stack as stk*)
+    | arg when is_valid_int arg -> pushInt (int_of_string arg) stk (*Calls the pushInt function with arg converted to an int and the stack as stk*)
+    | _ -> pushError stk (*If the argument is not valid, calls the pushError function with the stack as stk*)
  
 
 let pop (stk: stack) : stack =  (*Aaron Massey*) (*Might need to rework*)
@@ -150,7 +150,7 @@ let sub (stk : stack) : stack = (*Aaron Massey*)
       pushError (Int a :: rest)
     | _ -> pushError stk (*If there are no Ints, push an error onto the stack*)
 
-let mult (stk : stack) : stack = 
+let mult (stk : stack) : stack = (*Brayden Stille*)
   match stk with
     | Int a :: Int b :: rest ->(*If there are two Ints, multiply them*)
       pushInt (a * b) rest
@@ -158,7 +158,7 @@ let mult (stk : stack) : stack =
       pushError (Int a :: rest)
     | _ -> pushError stk (*If there are no Ints. push an error onto the stack*)
 
-let div (stk : stack) : stack = 
+let div (stk : stack) : stack = (*Brayden Stille*)
   match stk with
     | Int a :: Int b :: rest -> (*If there are two Ints, divide them *)
       if a = 0 then (*If the denominator is 0, push the Ints back onto the stack with an error*)
@@ -169,7 +169,7 @@ let div (stk : stack) : stack =
       pushError (Int a :: rest) (*If there is only one Int, push it back onto the stack with an error*)
     | _ -> pushError stk (*If there are no Ints, push an error to the stack*)
 
-let rem (stk : stack) : stack = 
+let rem (stk : stack) : stack = (*Brayden Stille*)
   match stk with
     | Int a :: Int b :: rest -> (*If there are two Ints, get the modulo*)
       if a = 0 then
@@ -180,25 +180,25 @@ let rem (stk : stack) : stack =
       pushError (Int a :: rest) (*If there is only one Int push it to the stack with an error*)
     | _ -> pushError stk (*If there are no Ints push an error to the stack*)
 
-let sign (stk : stack) : stack = 
+let sign (stk : stack) : stack = (*Brayden Stille*)
   match stk with
-    | Int a :: rest -> pushInt (a * -1) rest
-    | _ -> pushError stk 
+    | Int a :: rest -> pushInt (a * -1) rest (*Multiplies the top element of the stack by -1 and pushes it back onto the stack*)
+    | _ -> pushError stk (*If the top element is not an integer, push an error onto the stack*)
 
 let swap (stk : stack) : stack = (*Aaron Massey*)
   match stk with
-    | a :: b :: rest -> b :: a :: rest
-    | _ -> pushError stk
+    | a :: b :: rest -> b :: a :: rest (*Swaps the top two elements of the stack*)
+    | _ -> pushError stk (*If there are not enough elements to swap, push an error onto the stack*)
 
-let tostring (stk : stack) : stack = 
+let tostring (stk : stack) : stack = (*Brayden Stille*)
   match stk with
-    | [] -> pushError stk
-    | v :: rest -> pushStr (string_of_stack_value v) rest
+    | [] -> pushError stk (*If the stack is empty, push an error onto the stack*)
+    | v :: rest -> pushStr (string_of_stack_value v) rest (*Calls the pushStr function with the string representation of the top stack value*)
 
 let println (stk : stack) (out : out_channel): stack = (*Aaron Massey*)
   match stk with
-    | [] -> pushError stk
-    | v :: rest -> Printf.fprintf out "%s\n" (string_of_stack_value v); rest
+    | [] -> pushError stk (*If the stack is empty, push an error onto the stack*)
+    | v :: rest -> Printf.fprintf out "%s\n" (string_of_stack_value v); rest (*Calls the Printf.fprintf function to print the top stack value to the output channel*)
 
 
 (*-----------------------------------------------------*) 
