@@ -72,8 +72,15 @@ let is_valid_name (s : string) : bool =
     in
     check_rest 1
 
+let is_valid_int (s : string) : bool =
+  match int_of_string_opt s with
+    | Some _ -> true
+    | None -> false
 
-let write_lines (filename : string) (stack : stack_value list ) : unit =
+(* Write Stack to Output File*)
+
+
+let write_lines (filename : string) (stack : stack) : unit =
   let oc = open_out filename in 
   try
     List.iter (fun line -> output_string oc (to_string line ^ "\n")) stack;
@@ -83,6 +90,39 @@ let write_lines (filename : string) (stack : stack_value list ) : unit =
     close_out_noerr oc;
     raise e
 
+let push (arg : string) (stk : stack) : stack = 
+  if String.starts_with ~prefix:"\"" arg && String.ends_with ~suffix:"\"" arg then 
+    let s = String.sub arg 1 (String.length arg - 2) in
+      pushStr s stk
+  else 
+  match arg with 
+    | ":true:" -> pushBool true stk
+    | ":false:" -> pushBool false stk
+    | ":error:" -> pushError stk
+    | ":unit:" -> pushUnit stk
+    | arg when is_valid_name arg -> pushName arg stk
+    | arg when is_valid_int arg -> pushInt (int_of_string arg) stk
+    | _ -> pushError stk
+ 
+
+let add (stk : stack) : stack = 
+  match stk with
+    | Int a :: Int b :: rest ->
+        pushInt (a + b) rest
+    | Int a :: _ :: rest ->
+        pushError (Int a :: rest)
+    | _ -> pushError stk
+
+  let sub (stk : stack) : stack = 
+    match stk with
+      | Int a :: Int b :: rest ->
+          pushInt (b - a) rest
+      | _ -> pushError stk
+
+let pop (stk: stack) : stack = 
+  match stk with
+    | [] -> pushError stk
+    | _ :: rest -> rest
 (* Main Method*)
 let interpreter ( (input : string ), (output : string)) : unit = 
   let lines = read_lines input in
@@ -97,36 +137,10 @@ let interpreter ( (input : string ), (output : string)) : unit =
       let tokens = String.split_on_char ' ' trimmed_cmd in 
       let new_stk = 
         match tokens with
-        | ["push"; arg] ->
-            if String.starts_with ~prefix:"\"" arg && String.ends_with ~suffix:"\"" arg then 
-              let s = String.sub arg 1 (String.length arg - 2) in
-                pushStr s stk
-
-            else if arg = ":true:" then 
-              pushBool true stk
-            else if arg = ":false:" then
-              pushBool false stk
-            else if arg = ":error:" then 
-              pushError stk
-            else if arg = ":unit:" then
-              pushUnit stk
-
-            else if (match int_of_string_opt arg with Some _ -> true | None -> false)then 
-              let i = int_of_string arg in
-                pushInt i stk
-
-            else if is_valid_name arg then 
-              pushName arg stk
-
-            else
-              pushError stk  
-        | ["pop"] -> 
-            (match stk with
-              | [] -> pushError []
-              | _ :: rest -> rest
-            )
-        | ["add"] -> stk (*stub*)
-        | ["sub"] -> stk (*STUB*)
+        | ["push"; arg] -> push arg stk
+        | ["pop"] -> pop stk
+        | ["add"] -> add stk
+        | ["sub"] -> sub stk
         | ["mult"] -> stk (*STUB*)
         | ["div"] -> stk (*SUB*) 
         | ["rem"] -> stk (*STUB*)
@@ -134,12 +148,12 @@ let interpreter ( (input : string ), (output : string)) : unit =
         | ["swap"] -> stk (*STUB*)
         | ["toString"] ->
             (match stk with
-              |[] -> pushError []
+              |[] -> pushError stk
               | v :: rest -> pushStr (to_string v) rest
             )
         | ["println"] -> 
             (match stk with
-            | [] -> pushError [] 
+            | [] -> pushError stk 
             | v :: rest -> Printf.fprintf oc "%s\n" (to_string v); rest
           ) 
         | ["quit"] -> stk
