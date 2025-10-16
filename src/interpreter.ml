@@ -96,23 +96,23 @@ let write_lines (filename : string) (stack : stack) : unit =  (*Aaron Massey*)
 (*-----------------------------------------------------*) 
 
 
-let pushInt (n : int) (stk : stack) : stack = 
-  Int n :: stk
+let pushInt (n : int) (stk : stack) : stack = (*Brayden Stille*)
+  Int n :: stk (*Takes an Int (n) and pushes it onto the stack*)
 
-let pushStr (s : string) (stk : stack) : stack = 
-  Str s :: stk
+let pushStr (s : string) (stk : stack) : stack = (*Brayden Stille*)
+  Str s :: stk (*Takes a String (s) and pushes it onto the stack*)
 
-let pushName (name : string) (stk : stack) : stack =
-  Name name :: stk
+let pushName (name : string) (stk : stack) : stack = (*Brayden Stille*)
+  Name name :: stk (*Takes a Name (name) and pushes it onto the stack*)
 
-let pushBool (b : bool) (stk : stack) : stack = 
-  Bool b :: stk
+let pushBool (b : bool) (stk : stack) : stack = (*Brayden Stille*)
+  Bool b :: stk (*Takes a Bool (b) and pushes it onto the stack*)
 
-let pushError (stk : stack) : stack =
-  Error :: stk
+let pushError (stk : stack) : stack = (*Brayden Stille*)
+  Error :: stk (*Takes the stack and pushes an Error onto it*)
 
-let pushUnit (stk : stack) : stack =
-  Unit :: stk
+let pushUnit (stk : stack) : stack = (*Brayden Stille*)
+  Unit :: stk (*Takes the stack and pushes a Unit onto it*)
 
 let push (arg : string) (stk : stack) : stack = 
   if String.starts_with ~prefix:"\"" arg && String.ends_with ~suffix:"\"" arg then 
