@@ -4,7 +4,7 @@
 (*-----------------------------------------------------*) 
 
 
-type stack_value =                                          
+type stack_value = (*Aaron Massey*)                                        
   | Int of int                                              
   | Str of string                                           
   | Name of string                                          
@@ -13,7 +13,7 @@ type stack_value =
   | Unit                                                    
                                                             
                                                            
-type stack = stack_value list                               
+type stack = stack_value list  (*Aaron Massey*)                             
 
 
 (*-----------------------------------------------------*) 
@@ -25,7 +25,7 @@ let is_letter c = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
 
 let is_digit c = c >= '0' && c <= '9'
 
-let is_valid_name (s : string) : bool =
+let is_valid_name (s : string) : bool = (*Aaron Massey*)
   if String.length s = 0 then false
   else
     let first_char = s.[0] in
@@ -50,7 +50,7 @@ let is_valid_int (s : string) : bool =
 
 
 
-let string_of_stack_value (v : stack_value) : string =  
+let string_of_stack_value (v : stack_value) : string =  (*Aaron Massey*)
   match v with                                              
     | Int i -> string_of_int i                              
     | Str s -> s                                            
@@ -65,7 +65,8 @@ let string_of_stack_value (v : stack_value) : string =
 
 
 (* Read File into FIFO String List (Stack)*)
-let read_lines (filename : string) : string list = 
+let read_lines (filename : string) : string list = (*Aaron Massey*)
+ 
   let ic = open_in filename in (* Open the file *) 
   let rec loop acc = (* Recursive function that adds lines to list*)
     try
@@ -78,7 +79,8 @@ let read_lines (filename : string) : string list =
   loop []
 
 
-let write_lines (filename : string) (stack : stack) : unit =
+let write_lines (filename : string) (stack : stack) : unit =  (*Aaron Massey*)
+
   let oc = open_out filename in 
   try
     List.iter (fun line -> output_string oc (string_of_stack_value line ^ "\n")) stack;
@@ -127,12 +129,12 @@ let push (arg : string) (stk : stack) : stack =
     | _ -> pushError stk
  
 
-let pop (stk: stack) : stack =  
+let pop (stk: stack) : stack =  (*Aaron Massey*)
   match stk with                
     | [] -> pushError stk       
     | _ :: rest -> rest         
 
-let add (stk : stack) : stack =
+let add (stk : stack) : stack = (*Aaron Massey*)
   match stk with
     | Int a :: Int b :: rest ->
       pushInt (a + b) rest
@@ -140,7 +142,7 @@ let add (stk : stack) : stack =
       pushError (Int a :: rest)
     | _ -> pushError stk
 
-let sub (stk : stack) : stack = 
+let sub (stk : stack) : stack = (*Aaron Massey*)
   match stk with
     | Int a :: Int b :: rest ->
       pushInt (b - a) rest
@@ -183,7 +185,7 @@ let sign (stk : stack) : stack =
     | Int a :: rest -> pushInt (a * -1) stk
     | _ -> pushError stk
 
-let swap (stk : stack) : stack = 
+let swap (stk : stack) : stack = (*Aaron Massey*)
   match stk with
     | a :: b :: rest -> b :: a :: rest
     | _ -> pushError stk
@@ -193,7 +195,7 @@ let tostring (stk : stack) : stack =
     | [] -> pushError stk
     | v :: rest -> pushStr (string_of_stack_value v) rest
 
-let println (stk : stack) (out : out_channel): stack = 
+let println (stk : stack) (out : out_channel): stack = (*Aaron Massey*)
   match stk with
     | [] -> pushError stk
     | v :: rest -> Printf.fprintf out "%s\n" (string_of_stack_value v); rest
@@ -204,12 +206,12 @@ let println (stk : stack) (out : out_channel): stack =
 (*-----------------------------------------------------*) 
 
 
-let interpreter ( (input : string ), (output : string)) : unit = 
+let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey and Brayden Stille*)
   let lines = read_lines input in
   let oc = open_out output in 
 
   
-  let rec execute (commands : string list) (stk : stack) : stack = 
+  let rec execute (commands : string list) (stk : stack) : stack = (*Aaron Massey and Brayden Stille*)
     match commands with
     | [] -> stk
     | cmd :: rest ->
