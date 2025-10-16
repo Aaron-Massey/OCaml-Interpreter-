@@ -52,12 +52,12 @@ let is_valid_int (s : string) : bool = (*Brayden Stille*)
 
 let string_of_stack_value (v : stack_value) : string =  (*Aaron Massey*)
   match v with                                              
-    | Int i -> string_of_int i                              
-    | Str s -> s                                            
-    | Name n -> n                                           
-    | Bool b -> if b then ":true:" else ":false:"           
-    | Error -> ":error:"                                    
-    | Unit -> ":unit:"                                      
+    | Int i -> string_of_int i (*Converts an Int to a string*)                      
+    | Str s -> s (*Returns the string*)                   
+    | Name n -> n (*Returns the name*)                   
+    | Bool b -> if b then ":true:" else ":false:" (*Converts a Bool to a string*)       
+    | Error -> ":error:" (*Returns the error as a string*)     
+    | Unit -> ":unit:" (*Returns the unit as a string*)                                      
 
 (*-----------------------------------------------------*) 
 (*|                   File Handling                   |*) 
