@@ -20,7 +20,7 @@ type stack_value =
   | Error
   | Unit
 
-let rec to_string (v : stack_value) : string = 
+let rec string_of_stack_value (v : stack_value) : string = 
   match v with
     | Int i -> string_of_int i
     | Str s -> s
@@ -83,7 +83,7 @@ let is_valid_int (s : string) : bool =
 let write_lines (filename : string) (stack : stack) : unit =
   let oc = open_out filename in 
   try
-    List.iter (fun line -> output_string oc (to_string line ^ "\n")) stack;
+    List.iter (fun line -> output_string oc (string_of_stack_value line ^ "\n")) stack;
 
     close_out oc
   with e ->
@@ -105,24 +105,77 @@ let push (arg : string) (stk : stack) : stack =
     | _ -> pushError stk
  
 
-let add (stk : stack) : stack = 
+let pop (stk: stack) : stack =  
+  match stk with                
+    | [] -> pushError stk       
+    | _ :: rest -> rest         
+
+let add (stk : stack) : stack =
   match stk with
     | Int a :: Int b :: rest ->
-        pushInt (a + b) rest
-    | Int a :: _ :: rest ->
-        pushError (Int a :: rest)
+      pushInt (a + b) rest
+    | Int a :: rest ->
+      pushError (Int a :: rest)
     | _ -> pushError stk
 
-  let sub (stk : stack) : stack = 
-    match stk with
-      | Int a :: Int b :: rest ->
-          pushInt (b - a) rest
-      | _ -> pushError stk
+let sub (stk : stack) : stack = 
+  match stk with
+    | Int a :: Int b :: rest ->
+      pushInt (b - a) rest
+    | Int a :: rest ->
+      pushError (Int a :: rest)
+    | _ -> pushError stk
 
-let pop (stk: stack) : stack = 
+let mult (stk : stack) : stack = 
+  match stk with
+    | Int a :: Int b :: rest ->
+      pushInt (a * b) rest
+    | Int a :: rest ->
+      pushError (Int a :: rest)
+    | _ -> pushError stk
+
+let div (stk : stack) : stack = 
+  match stk with
+    | Int a :: Int b :: rest ->
+      if a = 0 then
+        pushError (Int a :: Int b :: rest)
+      else
+        pushInt (b / a) rest
+    | Int a :: rest ->
+      pushError (Int a :: rest)
+    | _ -> pushError stk
+
+let rem (stk : stack) : stack = 
+  match stk with
+    | Int a :: Int b :: rest ->
+      if a = 0 then
+        pushError (Int a :: Int b :: rest)
+      else
+        pushInt (b mod a) rest
+    | Int a :: rest ->
+      pushError (Int a :: rest)
+    | _ -> pushError stk
+
+let sign (stk : stack) : stack = 
+  match stk with
+    | Int a :: rest -> pushInt (a * -1) stk
+    | _ -> pushError stk
+
+let swap (stk : stack) : stack = 
+  match stk with
+    | a :: b :: rest -> b :: a :: rest
+    | _ -> pushError stk
+
+let tostring (stk : stack) : stack = 
   match stk with
     | [] -> pushError stk
-    | _ :: rest -> rest
+    | v :: rest -> pushStr (string_of_stack_value v) rest
+
+let println (stk : stack) (out : out_channel): stack = 
+  match stk with
+    | [] -> pushError stk
+    | v :: rest -> Printf.fprintf out "%s\n" (string_of_stack_value v); rest
+
 (* Main Method*)
 let interpreter ( (input : string ), (output : string)) : unit = 
   let lines = read_lines input in
@@ -141,21 +194,13 @@ let interpreter ( (input : string ), (output : string)) : unit =
         | ["pop"] -> pop stk
         | ["add"] -> add stk
         | ["sub"] -> sub stk
-        | ["mult"] -> stk (*STUB*)
-        | ["div"] -> stk (*SUB*) 
-        | ["rem"] -> stk (*STUB*)
-        | ["sign"] -> stk (*STUB*)
-        | ["swap"] -> stk (*STUB*)
-        | ["toString"] ->
-            (match stk with
-              |[] -> pushError stk
-              | v :: rest -> pushStr (to_string v) rest
-            )
-        | ["println"] -> 
-            (match stk with
-            | [] -> pushError stk 
-            | v :: rest -> Printf.fprintf oc "%s\n" (to_string v); rest
-          ) 
+        | ["mult"] -> mult stk 
+        | ["div"] -> div stk
+        | ["rem"] -> rem stk
+        | ["sign"] -> sign stk
+        | ["swap"] -> swap stk
+        | ["toString"] -> tostring stk
+        | ["println"] -> println stk oc
         | ["quit"] -> stk
         | _ -> pushError stk
       in
