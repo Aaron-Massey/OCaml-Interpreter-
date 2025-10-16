@@ -1,53 +1,24 @@
-(* Read File into FIFO String List*)
-let read_lines (filename : string) : string list = 
-  let ic = open_in filename in (* Open the file *) 
-  let rec loop acc = (* Recursive function that adds lines to list*)
-    try
-      let line = input_line ic in 
-      loop (line :: acc) (* Add the line to to list *)
-    with End_of_file -> 
-      close_in ic; (* Close the file*)
-      List.rev acc (* Reverse the list so it maintains FIFO order*)
-  in
-  loop []
 
-  (* Define types for stack values*)
-type stack_value =
-  | Int of int
-  | Str of string
-  | Name of string
-  | Bool of bool
-  | Error
-  | Unit
+(*-----------------------------------------------------*) 
+(*|                  Type Definitions                 |*) 
+(*-----------------------------------------------------*) 
 
-let rec string_of_stack_value (v : stack_value) : string = 
-  match v with
-    | Int i -> string_of_int i
-    | Str s -> s
-    | Name n -> n
-    | Bool b -> if b then ":true:" else ":false:"
-    | Error -> ":error:"
-    | Unit -> ":unit:"
 
-type stack = stack_value list
+type stack_value =                                          
+  | Int of int                                              
+  | Str of string                                           
+  | Name of string                                          
+  | Bool of bool                                            
+  | Error                                                   
+  | Unit                                                    
+                                                            
+                                                           
+type stack = stack_value list                               
 
-let pushInt (n : int) (stk : stack) : stack = 
-  Int n :: stk
 
-let pushStr (s : string) (stk : stack) : stack = 
-  Str s :: stk
-
-let pushName (name : string) (stk : stack) : stack =
-  Name name :: stk
-
-let pushBool (b : bool) (stk : stack) : stack = 
-  Bool b :: stk
-
-let pushError (stk : stack) : stack =
-  Error :: stk
-
-let pushUnit (stk : stack) : stack =
-  Unit :: stk
+(*-----------------------------------------------------*) 
+(*|                  Type Validation                  |*) 
+(*-----------------------------------------------------*) 
 
 
 let is_letter c = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
@@ -77,7 +48,34 @@ let is_valid_int (s : string) : bool =
     | Some _ -> true
     | None -> false
 
-(* Write Stack to Output File*)
+
+
+let string_of_stack_value (v : stack_value) : string =  
+  match v with                                              
+    | Int i -> string_of_int i                              
+    | Str s -> s                                            
+    | Name n -> n                                           
+    | Bool b -> if b then ":true:" else ":false:"           
+    | Error -> ":error:"                                    
+    | Unit -> ":unit:"                                      
+
+(*-----------------------------------------------------*) 
+(*|                   File Handling                   |*) 
+(*-----------------------------------------------------*) 
+
+
+(* Read File into FIFO String List (Stack)*)
+let read_lines (filename : string) : string list = 
+  let ic = open_in filename in (* Open the file *) 
+  let rec loop acc = (* Recursive function that adds lines to list*)
+    try
+      let line = input_line ic in 
+      loop (line :: acc) (* Add the line to to list *)
+    with End_of_file -> 
+      close_in ic; (* Close the file*)
+      List.rev acc (* Reverse the list so it maintains FIFO order*)
+  in
+  loop []
 
 
 let write_lines (filename : string) (stack : stack) : unit =
@@ -89,6 +87,30 @@ let write_lines (filename : string) (stack : stack) : unit =
   with e ->
     close_out_noerr oc;
     raise e
+
+
+(*-----------------------------------------------------*) 
+(*|             Command Implementations               |*) 
+(*-----------------------------------------------------*) 
+
+
+let pushInt (n : int) (stk : stack) : stack = 
+  Int n :: stk
+
+let pushStr (s : string) (stk : stack) : stack = 
+  Str s :: stk
+
+let pushName (name : string) (stk : stack) : stack =
+  Name name :: stk
+
+let pushBool (b : bool) (stk : stack) : stack = 
+  Bool b :: stk
+
+let pushError (stk : stack) : stack =
+  Error :: stk
+
+let pushUnit (stk : stack) : stack =
+  Unit :: stk
 
 let push (arg : string) (stk : stack) : stack = 
   if String.starts_with ~prefix:"\"" arg && String.ends_with ~suffix:"\"" arg then 
@@ -176,7 +198,12 @@ let println (stk : stack) (out : out_channel): stack =
     | [] -> pushError stk
     | v :: rest -> Printf.fprintf out "%s\n" (string_of_stack_value v); rest
 
-(* Main Method*)
+
+(*-----------------------------------------------------*) 
+(*|               Main Interpreter Code               |*) 
+(*-----------------------------------------------------*) 
+
+
 let interpreter ( (input : string ), (output : string)) : unit = 
   let lines = read_lines input in
   let oc = open_out output in 
@@ -215,8 +242,8 @@ let interpreter ( (input : string ), (output : string)) : unit =
   write_lines output final_stack; 
   close_out oc
 
-
-
-
+(*-----------------------------------------------------*)
+(*|        Manually change filenames for now          |*)
+(*-----------------------------------------------------*)
 let () =
-  interpreter ("input1-1.txt", "output.txt")
+  interpreter ("input10-1.txt", "output.txt")
