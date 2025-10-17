@@ -48,6 +48,9 @@ let is_valid_int (s : string) : bool = (*Brayden Stille*)
     | Some _ -> true (*If string can be converted to an int it will return true*)
     | None -> false (*If string cannot be converted to an int it will return false*)
 
+let is_quoted_string (s : string) : bool = (*Brayden Stille*)
+  String.length s >= 2 && String.get s 0 = '\"' && String.get s (String.length s - 1) = '\"' 
+  (*Checks if the string is at least 2 characters long and if the first and last characters are quotes*)
 
 
 let string_of_stack_value (v : stack_value) : string =  (*Aaron Massey*)
@@ -90,6 +93,15 @@ let write_lines (filename : string) (stack : stack) : unit =  (*Aaron Massey*)
     close_out_noerr oc; (*Close the output file without raising an error*)
     raise e (*raises the error*)
 
+let tokenize_command (s : string) : string list = (*Aaron Massey*)
+  let s = String.trim s in (*Trims whitespace from the string*)
+  if String.length s = 0 then [] (*If the string is empty, return an empty list*)
+  else
+    match String.index_opt s ' ' with 
+      | None -> [s] 
+      | Some idx ->
+        let cmd = String.sub s 0 idx in
+        let arg = String.sub s (idx + 1) (String.length s - idx - 1) |> String.trim in [cmd; arg] 
 
 (*-----------------------------------------------------*) 
 (*|             Command Implementations               |*) 
@@ -115,7 +127,7 @@ let pushUnit (stk : stack) : stack = (*Brayden Stille*)
   Unit :: stk (*Takes the stack and pushes a Unit onto it*)
 
 let push (arg : string) (stk : stack) : stack = (*Brayden Stille*)
-  if String.starts_with ~prefix:"\"" arg && String.ends_with ~suffix:"\"" arg then (*Checks if the argument is wrapped in quotes*)
+  if is_quoted_string arg then (*Checks if the argument is wrapped in quotes*)
     let s = String.sub arg 1 (String.length arg - 2) in (*Removes the quotes from the argument*)
       pushStr s stk (*Calls the pushStr function with s as the string and the stack as stk*)
   else
@@ -216,7 +228,7 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
     | [] -> stk (*If there are no commands left return the stack*)
     | cmd :: rest -> (*If there is a command left, turn it to a string then match it with the function*)
       let trimmed_cmd = String.trim cmd in (*Trims the whitespace from the command*)
-      let tokens = String.split_on_char ' ' trimmed_cmd in (*tokenizes the command*)
+      let tokens = tokenize_command trimmed_cmd in (*Tokenizes the command into a list of strings*)
       let new_stk = (*executes the command and returns the new stack*)
         match tokens with
         | ["push"; arg] -> push arg stk (*If command is push; push function is called*)
