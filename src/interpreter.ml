@@ -181,7 +181,7 @@ let div (stk : stack) : stack = (*Brayden Stille*)
       pushError (Int a :: rest) (*If there is only one Int, push it back onto the stack with an error*)
     | _ -> pushError stk (*If there are no Ints, push an error to the stack*)
 
-let rem (stk : stack) : stack = (*Brayden Stille*)
+let rem (stk : stack) : stack = (*Aaron Massey*)
   match stk with
     | Int a :: Int b :: rest -> (*If there are two Ints, get the modulo*)
       if a = 0 then
@@ -223,7 +223,7 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
   let oc = open_out output in 
 
   
-  let rec execute (commands : string list) (stk : stack) : stack = (*Aaron Massey and Brayden Stille*)
+  let rec execute (commands : string list) (stk : stack) : stack =
     match commands with
     | [] -> stk (*If there are no commands left return the stack*)
     | cmd :: rest -> (*If there is a command left, turn it to a string then match it with the function*)
@@ -259,7 +259,7 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
 (*-----------------------------------------------------*)
 (*|        Manually change filenames for now          |*)
 (*-----------------------------------------------------*)
-let () =
+(*let () =
   interpreter ("input1-1.txt", "output1.txt");
   interpreter ("input2-1.txt", "output2.txt");
   interpreter ("input3-1.txt", "output3.txt");
@@ -270,4 +270,4 @@ let () =
   interpreter ("input8-1.txt", "output8.txt");
   interpreter ("input9-1.txt", "output9.txt");
   interpreter ("input10-1.txt", "output10.txt");
-
+*)
