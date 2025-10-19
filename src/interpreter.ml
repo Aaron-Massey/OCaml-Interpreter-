@@ -181,7 +181,7 @@ let div (stk : stack) : stack = (*Brayden Stille*)
       pushError (Int a :: rest) (*If there is only one Int, push it back onto the stack with an error*)
     | _ -> pushError stk (*If there are no Ints, push an error to the stack*)
 
-let rem (stk : stack) : stack = (*Aaron Massey*)
+let rem (stk : stack) : stack = (*Brayden Stille*)
   match stk with
     | Int a :: Int b :: rest -> (*If there are two Ints, get the modulo*)
       if a = 0 then
@@ -213,6 +213,62 @@ let println (stk : stack) (out : out_channel): stack = (*Aaron Massey*)
     | v :: rest -> Printf.fprintf out "%s\n" (string_of_stack_value v); rest (*Calls the Printf.fprintf function to print the top stack value to the output channel*)
 
 
+
+(*-----------------------------------------------------*) 
+(*|               Part 2 Functions Code               |*) 
+(*-----------------------------------------------------*) 
+
+let cat (stk : stack) : stack =
+  match stk with
+    | Str a :: Str b :: rest -> pushStr (b ^ a) rest
+    | _ -> pushError stk
+
+let and_ (stk : stack) : stack = 
+  match stk with
+    | Bool a :: Bool b :: rest -> pushBool (b && a) rest
+    | _ -> pushError stk
+
+let or_ (stk: stack) : stack = 
+  match stk with
+    | Bool a :: Bool b :: rest -> pushBool (b || a) rest
+    | _ -> pushError stk
+
+let not_ (stk: stack) : stack = 
+  match stk with
+    | Bool a :: rest -> pushBool (not a) rest
+    | _ -> pushError stk
+
+let equal_ (stk: stack) : stack = 
+  match stk with
+    | Int a :: Int b :: rest -> pushBool (a = b) rest
+    | _ -> pushError stk
+
+let lessThan_ (stk: stack) : stack = 
+  match stk with
+    | Int a :: Int b :: rest -> pushBool (b < a) rest
+    | _ -> pushError stk
+
+let assign (stk: stack) : stack = 
+  stk (*STUB*)
+
+let if_ (stk: stack) : stack = 
+  match stk with 
+    | trueVal :: falseVal :: Bool condition :: rest ->
+      if condition then
+        trueVal :: rest
+      else
+        falseVal :: rest
+    | _ -> pushError stk
+
+let let_ (stk: stack) : stack =
+  stk (*STUB*)
+
+  
+let end_ (stk: stack) : stack =
+  stk (*STUB*)
+
+
+
 (*-----------------------------------------------------*) 
 (*|               Main Interpreter Code               |*) 
 (*-----------------------------------------------------*) 
@@ -223,7 +279,7 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
   let oc = open_out output in 
 
   
-  let rec execute (commands : string list) (stk : stack) : stack =
+  let rec execute (commands : string list) (stk : stack) : stack = (*Aaron Massey and Brayden Stille*)
     match commands with
     | [] -> stk (*If there are no commands left return the stack*)
     | cmd :: rest -> (*If there is a command left, turn it to a string then match it with the function*)
@@ -243,7 +299,17 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
         | ["toString"] -> tostring stk (*If command is toString; tostring function is called*)
         | ["println"] -> println stk oc (*If command is println; println function is called*)
         | ["quit"] -> stk (*If command is quit; return the stack and stop executing*)
-        | _ -> pushError stk (*If command is not recognized; pushError function is called*)
+        | ["cat"] -> cat stk (*If command is cat; cat function is called*)
+        | ["and"] -> and_ stk
+        | ["or"] -> or_ stk
+        | ["not"] -> not_ stk
+        | ["equal"] -> equal_ stk
+        | ["lessThan"] -> lessThan_ stk
+        | ["assign"] -> assign stk
+        | ["if"] -> if_ stk
+        | ["let"] -> let_ stk
+        | ["end"] -> end_ stk
+       | _ -> pushError stk (*If command is not recognized; pushError function is called*)
       in
       if tokens = ["quit"] then (*If command is quit; return the stack and stop executing*)
         new_stk (*Return the new stack*)
@@ -259,7 +325,7 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
 (*-----------------------------------------------------*)
 (*|        Manually change filenames for now          |*)
 (*-----------------------------------------------------*)
-(*let () =
+let () =
   interpreter ("input1-1.txt", "output1.txt");
   interpreter ("input2-1.txt", "output2.txt");
   interpreter ("input3-1.txt", "output3.txt");
@@ -270,4 +336,4 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
   interpreter ("input8-1.txt", "output8.txt");
   interpreter ("input9-1.txt", "output9.txt");
   interpreter ("input10-1.txt", "output10.txt");
-*)
+
