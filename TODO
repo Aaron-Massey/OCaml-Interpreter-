@@ -1,0 +1,36 @@
+Rework Pop function to return top value 
+- Portntially use optional type to deal with empty stack case
+- Update ALL functions to properly support new Pop
+
+Figure out let, assign, end functions 
+Potentially store assigned elements in a dictionary?
+
+
+```
+  push a 
+  push 3
+  assign
+```
+
+should create a new element in the dictionary using a as the key which stores the value 3 
+
+something along the lines of 
+match stk with
+  | Name n :: val :: rest -> 
+    (match val with 
+      | Int v -> #Assign a value in the dictionary 
+      | String v -> #Assign a value in the dictionary
+      | Bool v -> #Assign a value in the dictionary
+      | Unit -> #Assign a value in the dictionary
+      | Name v ->
+      ( ##dictionary lookup name v 
+        ## If V has a value, then assign that value,
+        ## If not return an error )
+      | _ -> pushError stk 
+      )
+  | _ -> pushError stk
+
+
+
+  IMPLEMENT POP FIRST SO THAT YOU CAN HANDLE NAMES IN ALL OTHER FUNCTIONS 
+  CREATE checkDict (returns boolean), addDict(returns unit), readDict(returns value)

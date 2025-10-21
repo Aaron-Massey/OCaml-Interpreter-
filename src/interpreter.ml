@@ -309,7 +309,7 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
         | ["if"] -> if_ stk
         | ["let"] -> let_ stk
         | ["end"] -> end_ stk
-       | _ -> pushError stk (*If command is not recognized; pushError function is called*)
+        | _ -> pushError stk (*If command is not recognized; pushError function is called*)
       in
       if tokens = ["quit"] then (*If command is quit; return the stack and stop executing*)
         new_stk (*Return the new stack*)
