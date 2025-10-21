@@ -1,5 +1,10 @@
 
 (*-----------------------------------------------------*) 
+(*|Interpreter Project - Aaron Massey & Brayden Stille|*) 
+(*-----------------------------------------------------*) 
+
+
+(*-----------------------------------------------------*) 
 (*|                  Type Definitions                 |*) 
 (*-----------------------------------------------------*) 
 
@@ -10,7 +15,7 @@ type stack_value = (*Aaron Massey*)
   | Name of string                                          
   | Bool of bool                                            
   | Error                                                   
-  | Unit                                                    
+  | Unit                             
                                                             
                                                            
 type stack = stack_value list  (*Aaron Massey*)                             
@@ -249,7 +254,13 @@ let lessThan_ (stk: stack) : stack =
     | _ -> pushError stk
 
 let assign (stk: stack) : stack = 
-  stk (*STUB*)
+  match stk with 
+    | Int i :: Name n :: rest -> stk (*STUB*) 
+    | Bool b :: Name n :: rest ->stk (*STUB*) 
+    | Str s :: Name n :: rest ->stk (*STUB*) 
+    | Unit :: Name n :: rest ->stk (*STUB*) 
+    | Name a :: Name n :: rest ->stk (*STUB*) 
+    | _ -> pushError stk
 
 let if_ (stk: stack) : stack = 
   match stk with 
