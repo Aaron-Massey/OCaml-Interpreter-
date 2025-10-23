@@ -1,4 +1,3 @@
-
 (*-----------------------------------------------------*) 
 (*|Interpreter Project - Aaron Massey & Brayden Stille|*) 
 (*-----------------------------------------------------*) 
@@ -8,7 +7,6 @@
 (*|                  Type Definitions                 |*) 
 (*-----------------------------------------------------*) 
 
-
 type stack_value = (*Aaron Massey*)                                        
   | Int of int                                              
   | Str of string                                           
@@ -17,15 +15,18 @@ type stack_value = (*Aaron Massey*)
   | Error                                                   
   | Unit of stack_value option  
                                                             
-                                                           
 type stack = stack_value list  (*Aaron Massey*)                             
 
 type enviroment = (stack_value * stack_value) list  (*Aaron Massey*)
 
+
+(* Special scope marker (not a valid user identifier) *)
+let scope_marker : stack_value = Name "__::scope::__"
+
+
 (*-----------------------------------------------------*) 
 (*|                  Type Validation                  |*) 
 (*-----------------------------------------------------*) 
-
 
 let is_letter c = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') (*Checks if a character is a letter*)
 
@@ -43,11 +44,11 @@ let is_valid_name (s : string) : bool = (*Aaron Massey*)
         else
           let char = s.[i] in
           if is_letter char || is_digit char || char = '_' then (*Every element must be either a digit, letter, or '_'*)
-          check_rest (i + 1)
+            check_rest (i + 1)
           else
             false
-    in
-    check_rest 1
+      in
+      check_rest 1
 
 let is_valid_int (s : string) : bool = (*Brayden Stille*)
   match int_of_string_opt s with (*Tries to convert the string to an int*)
@@ -72,10 +73,8 @@ let string_of_stack_value (v : stack_value) : string =  (*Aaron Massey*)
 (*|                   File Handling                   |*) 
 (*-----------------------------------------------------*) 
 
-
 (* Read File into FIFO String List (Stack)*)
 let read_lines (filename : string) : string list = (*Aaron Massey*)
- 
   let ic = open_in filename in (* Open the file *) 
   let rec loop acc = (* Recursive function that adds lines to list*)
     try
@@ -89,11 +88,9 @@ let read_lines (filename : string) : string list = (*Aaron Massey*)
 
 
 let write_lines (filename : string) (stack : stack) : unit =  (*Aaron Massey*)
-
   let oc = open_out filename in (*Open the output file*)
   try 
     List.iter (fun line -> output_string oc (string_of_stack_value line ^ "\n")) stack; (*Write each line to the output file*)
-
     close_out oc (*Close the output file*)
   with e ->
     close_out_noerr oc; (*Close the output file without raising an error*)
@@ -112,7 +109,6 @@ let tokenize_command (s : string) : string list = (*Aaron Massey*)
 (*-----------------------------------------------------*) 
 (*|             Command Implementations               |*) 
 (*-----------------------------------------------------*) 
-
 
 let pushInt (n : int) (stk : stack) : stack = (*Brayden Stille*)
   Int n :: stk (*Takes an Int (n) and pushes it onto the stack*)
@@ -137,9 +133,9 @@ let pushUnit (u : stack_value option) (stk : stack) : stack = (*Brayden Stille*)
 let push (arg : string) (stk : stack) : stack = (*Brayden Stille*)
   if is_quoted_string arg then (*Checks if the argument is wrapped in quotes*)
     let s = String.sub arg 1 (String.length arg - 2) in (*Removes the quotes from the argument*)
-      pushStr s stk (*Calls the pushStr function with s as the string and the stack as stk*)
+    pushStr s stk (*Calls the pushStr function with s as the string and the stack as stk*)
   else
-  match arg with (*matches the push function with the argument*)
+    match arg with (*matches the push function with the argument*)
     | ":true:" -> pushBool true stk (*Calls the pushBool function with true and the stack as stk*)
     | ":false:" -> pushBool false stk (*Calls the pushBool function with false and the stack as stk*)
     | ":error:" -> pushError stk (*Calls the pushError function with the stack as stk*)
@@ -148,8 +144,7 @@ let push (arg : string) (stk : stack) : stack = (*Brayden Stille*)
     | arg when is_valid_int arg -> pushInt (int_of_string arg) stk (*Calls the pushInt function with arg converted to an int and the stack as stk*)
     | _ -> pushError stk (*If the argument is not valid, calls the pushError function with the stack as stk*)
  
-
-let pop (stk: stack) : stack =  (*Aaron Massey*) (*Might need to rework*)
+let pop (stk: stack) : stack =  (*Aaron Massey*) 
   match stk with                
     | [] -> pushError stk
     | _ :: rest -> rest
@@ -226,20 +221,28 @@ let println (stk : stack) (out : out_channel): stack = (*Aaron Massey*)
 (*|               Part 2 Functions Code               |*) 
 (*-----------------------------------------------------*) 
 
+(* Environment lookup helpers *)
+
 let rec check_environment (name : string) (env : enviroment): bool =
   match env with
     | [] -> false
-    | (n, v) :: rest -> if string_of_stack_value n = name then true else check_environment name rest
+    | (n, _) :: rest -> if string_of_stack_value n = name then true else check_environment name rest
 
-let add_to_environment (name : stack_value) (value : stack_value) (env : enviroment): unit =
-  () (*STUB*)
+let add_to_environment (name : stack_value) (value : stack_value) (envr : enviroment ref): unit =
+  envr := (name, value) :: !envr
 
-let remove_from_environment (name : stack_value) (env : enviroment): unit =
-  () (*STUB*)
+let remove_from_environment (name : stack_value) (envr : enviroment ref): unit =
+  let key = string_of_stack_value name in
+  envr := List.filter (fun (n, _) -> string_of_stack_value n <> key) !envr
 
-let fetch_from_environment (name : string) (env : enviroment): stack_value =
-  Unit None(*STUB*)
-  
+let fetch_from_environment (name : string) (envr : enviroment ref): stack_value =
+  let key = name in
+  match List.find_opt (fun (n, _) -> string_of_stack_value n = key) !envr with
+  | None -> Error
+  | Some (_, v) -> v
+
+(* String ops / booleans / comparisons *)
+
 let cat (stk : stack) : stack =
   match stk with
     | Str a :: Str b :: rest -> pushStr (b ^ a) rest
@@ -275,16 +278,20 @@ let greaterThan_ (stk: stack) : stack =
     | Int a :: Int b :: rest -> pushBool (b > a) rest
     | _ -> pushError stk
 
-let assign (stk: stack) : stack = 
+(* assign: <value> <Name n> assign  => binds n=value in current scope, pushes :unit: *)
+let assign (envr : enviroment ref) (stk: stack) : stack = 
   match stk with
-    | Int i :: Name n :: rest -> stk (*STUB*) 
-    | Bool b :: Name n :: rest ->stk (*STUB*) 
-    | Str s :: Name n :: rest ->stk (*STUB*) 
-    | Unit None :: Name n :: rest ->stk (*STUB*)
-    | Unit Some a:: Name n :: rest -> stk (*STUB*)
-    | Name a :: Name n :: rest ->stk (*STUB*) 
+    | v :: Name n :: rest ->
+        begin match v with
+        | Int _ | Str _ | Bool _ | Unit _ ->
+            add_to_environment (Name n) v envr;
+            pushUnit None rest
+        | Name _ | Error ->
+            pushError stk
+        end
     | _ -> pushError stk
 
+(* if:  <trueVal> <falseVal> <Bool cond> if  => pushes selected value *)
 let if_ (stk: stack) : stack = 
   match stk with 
     | trueVal :: falseVal :: Bool condition :: rest ->
@@ -294,12 +301,33 @@ let if_ (stk: stack) : stack =
         falseVal :: rest
     | _ -> pushError stk
 
-let let_ (stk: stack) : stack =
-  stk (*STUB*)
+(* let: pushes a scope marker on stack and into env *)
+let let_ (envr : enviroment ref) (stk: stack) : stack =
+  add_to_environment scope_marker (Unit None) envr;
+  scope_marker :: stk
 
-  
-let end_ (stk: stack) : stack =
-  stk (*STUB*)
+(* end: pop to scope marker in both env and stack; result is value just before marker (or :unit:) *)
+let end_ (envr : enviroment ref) (stk: stack) : stack =
+  let rec pop_to_marker carry s =
+    match s with
+    | [] -> None
+    | x :: xs ->
+        if x = scope_marker then Some (carry, xs)
+        else pop_to_marker (Some x) xs
+  in
+  match pop_to_marker None stk with
+  | None -> pushError stk
+  | Some (carry_opt, rest_after_marker) ->
+      let rec pop_env_until_marker e =
+        match e with
+        | [] -> []
+        | (n, _) :: xs ->
+            if n = scope_marker then xs
+            else pop_env_until_marker xs
+      in
+      envr := pop_env_until_marker !envr;
+      let result = match carry_opt with Some v -> v | None -> Unit None in
+      result :: rest_after_marker
 
 
 
@@ -307,11 +335,10 @@ let end_ (stk: stack) : stack =
 (*|               Main Interpreter Code               |*) 
 (*-----------------------------------------------------*) 
 
-
 let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey and Brayden Stille*)
   let lines = read_lines input in
   let oc = open_out output in 
-  let enviroment = [] in 
+  let enviroment : enviroment ref = ref [] in 
   
   let rec execute (commands : string list) (stk : stack) : stack = (*Aaron Massey and Brayden Stille*)
     match commands with
@@ -339,20 +366,19 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
         | ["not"] -> not_ stk
         | ["equal"] -> equal_ stk
         | ["lessThan"] -> lessThan_ stk
-        | ["assign"] -> assign stk
+        | ["greaterThan"] -> greaterThan_ stk
+        | ["assign"] -> assign enviroment stk
         | ["if"] -> if_ stk
-        | ["let"] -> let_ stk
-        | ["end"] -> end_ stk
+        | ["let"] -> let_ enviroment stk
+        | ["end"] -> end_ enviroment stk
         | _ -> pushError stk (*If command is not recognized; pushError function is called*)
       in
       if tokens = ["quit"] then (*If command is quit; return the stack and stop executing*)
         new_stk (*Return the new stack*)
       else
         execute rest new_stk (*Continue executing the rest of the commands*)
-    in
+  in
   let final_stack = execute lines [] in (*Start executing the commands with an empty stack*)
-
-
   write_lines output final_stack; (*Write the final stack to the output file*)
   close_out oc (*close output channel*)
 
@@ -370,4 +396,3 @@ let () =
   interpreter ("input8-1.txt", "output/output8.txt");
   interpreter ("input9-1.txt", "output/output9.txt");
   interpreter ("input10-1.txt", "output/output10.txt");
-
