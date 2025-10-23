@@ -225,22 +225,28 @@ let println (stk : stack) (out : out_channel): stack = (*Aaron Massey*)
 (*|               Part 2 Functions Code               |*) 
 (*-----------------------------------------------------*) 
 
-let rec check_environment (name : string) (env : enviroment): var option =
+let rec check_environment (name : string) (env : enviroment): bool =
   match env with
-    | [] -> None
-    | (n, v) :: rest -> if string_of_stack_value n = name then Some (n,v) else check_environment name rest
+    | [] -> false
+    | (n, v) :: rest -> if string_of_stack_value n = name then true else check_environment name rest
 
-let add_to_environment (name : stack_value) (value : stack_value) (env : enviroment): unit =
-  () (*STUB*)
+let add_to_environment (name : stack_value) (value : stack_value) (env : enviroment): enviroment =
+  (name, value) :: env 
 
-let remove_from_environment (name : stack_value) (env : enviroment): unit =
-  match check_environment (string_of_stack_value name) env with
-    | _ -> ()
+let remove_from_environment (name : stack_value) (env : enviroment): enviroment =
+  let key = string_of_stack_value name in
+  List.filter(fun(n,_) -> string_of_stack_value n <> key) env
 
-let fetch_from_environment (name : stack_value) (env : enviroment): stack_value =
-  match check_environment (string_of_stack_value name) env with
-    | Some (_, v) -> v
-    | None -> Error
+let rec fetch_from_environment (name : string) (env : enviroment): stack_value =
+  match env with
+    | [] -> Error 
+    | (n, v) :: rest -> 
+          if string_of_stack_value n = name then v  
+          else fetch_from_environment name rest
+
+let reassign_in_environment (name : stack_value) (value : stack_value) (env : enviroment): enviroment =
+  let env_without_name = remove_from_environment name env in
+  add_to_environment name value env_without_name
   
 let cat (stk : stack) : stack =
   match stk with
@@ -306,10 +312,9 @@ let end_ (stk: stack) : stack =
 
 let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey and Brayden Stille*)
   let lines = read_lines input in
-  let oc = open_out output in 
-  let enviroment = [] in 
+  let oc = open_out output in  
   
-  let rec execute (commands : string list) (stk : stack) : stack = (*Aaron Massey and Brayden Stille*)
+  let rec execute (commands : string list) (stk : stack) (env : enviroment): stack = (*Aaron Massey and Brayden Stille*)
     match commands with
     | [] -> stk (*If there are no commands left return the stack*)
     | cmd :: rest -> (*If there is a command left, turn it to a string then match it with the function*)
@@ -344,15 +349,15 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
       if tokens = ["quit"] then (*If command is quit; return the stack and stop executing*)
         new_stk (*Return the new stack*)
       else
-        execute rest new_stk (*Continue executing the rest of the commands*)
+        execute rest new_stk env (*Continue executing the rest of the commands*)
     in
-  let final_stack = execute lines [] in (*Start executing the commands with an empty stack*)
+let final_stack = execute lines [] [] in (*Start executing the commands with an empty stack*)
 
 
   write_lines output final_stack; (*Write the final stack to the output file*)
   close_out oc (*close output channel*)
 
-(*-----------------------------------------------------*)
+(*-----------------------------------------------------*) 
 (*|        Manually change filenames for now          |*)
 (*-----------------------------------------------------*)
 let () =
