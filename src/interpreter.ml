@@ -12,7 +12,7 @@ type stack_value =
   | Name of string
   | Bool of bool
   | Error
-  | Unit of stack_value option
+  | Unit 
 
 type stack = stack_value list
 type enviroment = (string * stack_value) list
@@ -56,7 +56,7 @@ let string_of_stack_value (v : stack_value) : string =
   | Name n -> n
   | Bool b -> if b then ":true:" else ":false:"
   | Error -> ":error:"
-  | Unit _ -> ":unit:"
+  | Unit -> ":unit:"
 
 (*-----------------------------------------------------*) 
 (*|                   File Handling                   |*) 
@@ -102,8 +102,7 @@ let pushStr (s : string) (stk : stack) : stack = Str s :: stk
 let pushName (name : string) (stk : stack) : stack = Name name :: stk
 let pushBool (b : bool) (stk : stack) : stack = Bool b :: stk
 let pushError (stk : stack) : stack = Error :: stk
-let pushUnit (u : stack_value option) (stk : stack) : stack =
-  match u with None -> Unit None :: stk | Some v -> Unit (Some v) :: stk
+let pushUnit (u : stack_value option) (stk : stack) : stack = Unit :: stk  
 
 let push (arg : string) (stk : stack) : stack =
   if is_quoted_string arg then
@@ -305,7 +304,7 @@ let if_ (env: enviroment) (stk: stack) : stack * enviroment =
   | _ -> (pushError stk, env)
 
 let let_ (env : enviroment) (stk: stack) : stack * enviroment =
-  let env2 = add_to_environment scope_marker_str (Unit None) env in
+  let env2 = add_to_environment scope_marker_str (Unit) env in
   (scope_marker :: stk, env2)
 
 (* end without a variable named carry; also no primes in names *)
@@ -334,7 +333,7 @@ let end_ (env : enviroment) (stk: stack) : stack * enviroment =
             else drop_env_until_marker xs
       in
       let env2 = drop_env_until_marker env in
-      let result = match maybe_top with Some v -> v | None -> Unit None in
+      let result = match maybe_top with Some v -> v | None -> Unit in
       (result :: rest_after_marker, env2)
 
 (*-----------------------------------------------------*) 
