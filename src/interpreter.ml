@@ -15,12 +15,12 @@ type stack_value = (*Aaron Massey*)
   | Name of string                                          
   | Bool of bool                                            
   | Error                                                   
-  | Unit of stack_value option  
+  | Unit 
                                                             
                                                            
 type stack = stack_value list  (*Aaron Massey*)                             
-
-type enviroment = (stack_value * stack_value) list  (*Aaron Massey*)
+type var = (stack_value * stack_value)
+type enviroment = var list  (*Aaron Massey*)
 
 (*-----------------------------------------------------*) 
 (*|                  Type Validation                  |*) 
@@ -67,6 +67,7 @@ let string_of_stack_value (v : stack_value) : string =  (*Aaron Massey*)
     | Bool b -> if b then ":true:" else ":false:" (*Converts a Bool to a string*)       
     | Error -> ":error:" (*Returns the error as a string*)     
     | Unit _ -> ":unit:" (*Returns the unit as a string*)                                      
+
 
 (*-----------------------------------------------------*) 
 (*|                   File Handling                   |*) 
@@ -129,10 +130,8 @@ let pushBool (b : bool) (stk : stack) : stack = (*Brayden Stille*)
 let pushError (stk : stack) : stack = (*Brayden Stille*)
   Error :: stk (*Takes the stack and pushes an Error onto it*)
 
-let pushUnit (u : stack_value option) (stk : stack) : stack = (*Brayden Stille*)
-  match u with 
-    | None -> Unit None :: stk
-    | Some v -> Unit (Some v) :: stk
+let pushUnit (stk : stack) : stack = (*Brayden Stille*)
+  Unit :: stk
 
 let push (arg : string) (stk : stack) : stack = (*Brayden Stille*)
   if is_quoted_string arg then (*Checks if the argument is wrapped in quotes*)
@@ -143,7 +142,7 @@ let push (arg : string) (stk : stack) : stack = (*Brayden Stille*)
     | ":true:" -> pushBool true stk (*Calls the pushBool function with true and the stack as stk*)
     | ":false:" -> pushBool false stk (*Calls the pushBool function with false and the stack as stk*)
     | ":error:" -> pushError stk (*Calls the pushError function with the stack as stk*)
-    | ":unit:" -> pushUnit None stk (*Calls the pushUnit function with the stack as stk*)
+    | ":unit:" -> pushUnit stk (*Calls the pushUnit function with the stack as stk*)
     | arg when is_valid_name arg -> pushName arg stk (*Calls the pushName function with arg as the name and the stack as stk*)
     | arg when is_valid_int arg -> pushInt (int_of_string arg) stk (*Calls the pushInt function with arg converted to an int and the stack as stk*)
     | _ -> pushError stk (*If the argument is not valid, calls the pushError function with the stack as stk*)
@@ -226,19 +225,22 @@ let println (stk : stack) (out : out_channel): stack = (*Aaron Massey*)
 (*|               Part 2 Functions Code               |*) 
 (*-----------------------------------------------------*) 
 
-let rec check_environment (name : string) (env : enviroment): bool =
+let rec check_environment (name : string) (env : enviroment): var option =
   match env with
-    | [] -> false
-    | (n, v) :: rest -> if string_of_stack_value n = name then true else check_environment name rest
+    | [] -> None
+    | (n, v) :: rest -> if string_of_stack_value n = name then Some (n,v) else check_environment name rest
 
 let add_to_environment (name : stack_value) (value : stack_value) (env : enviroment): unit =
   () (*STUB*)
 
 let remove_from_environment (name : stack_value) (env : enviroment): unit =
-  () (*STUB*)
+  match check_environment (string_of_stack_value name) env with
+    | _ -> ()
 
-let fetch_from_environment (name : string) (env : enviroment): stack_value =
-  Unit None(*STUB*)
+let fetch_from_environment (name : stack_value) (env : enviroment): stack_value =
+  match check_environment (string_of_stack_value name) env with
+    | Some (_, v) -> v
+    | None -> Error
   
 let cat (stk : stack) : stack =
   match stk with
@@ -275,8 +277,7 @@ let assign (stk: stack) : stack =
     | Int i :: Name n :: rest -> stk (*STUB*) 
     | Bool b :: Name n :: rest ->stk (*STUB*) 
     | Str s :: Name n :: rest ->stk (*STUB*) 
-    | Unit None :: Name n :: rest ->stk (*STUB*)
-    | Unit Some a:: Name n :: rest -> stk (*STUB*)
+    | Unit  :: Name n :: rest ->stk (*STUB*)
     | Name a :: Name n :: rest ->stk (*STUB*) 
     | _ -> pushError stk
 
