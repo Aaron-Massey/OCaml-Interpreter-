@@ -2,397 +2,400 @@
 (*|Interpreter Project - Aaron Massey & Brayden Stille|*) 
 (*-----------------------------------------------------*) 
 
-
 (*-----------------------------------------------------*) 
 (*|                  Type Definitions                 |*) 
 (*-----------------------------------------------------*) 
 
-type stack_value = (*Aaron Massey*)                                        
-  | Int of int                                              
-  | Str of string                                           
-  | Name of string                                          
-  | Bool of bool                                            
-  | Error                                                   
-  | Unit of stack_value option  
-                                                            
-type stack = stack_value list  (*Aaron Massey*)                             
+type stack_value =
+  | Int of int
+  | Str of string
+  | Name of string
+  | Bool of bool
+  | Error
+  | Unit of stack_value option
 
-type enviroment = (stack_value * stack_value) list  (*Aaron Massey*)
+type stack = stack_value list
+type enviroment = (string * stack_value) list
 
-
-(* Special scope marker (not a valid user identifier) *)
-let scope_marker : stack_value = Name "__::scope::__"
-
+(* Special scope marker (not user-creatable name) *)
+let scope_marker_str = "__::scope::__"
+let scope_marker : stack_value = Name scope_marker_str
 
 (*-----------------------------------------------------*) 
 (*|                  Type Validation                  |*) 
 (*-----------------------------------------------------*) 
 
-let is_letter c = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') (*Checks if a character is a letter*)
+let is_letter c = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+let is_digit c = c >= '0' && c <= '9'
 
-let is_digit c = c >= '0' && c <= '9' (*Checks if a character is a digit*)
-
-let is_valid_name (s : string) : bool = (*Aaron Massey*)
-  if String.length s = 0 then false (*If the string is empty, it is not a valid name*)
-  else
-    let first_char = s.[0] in 
-    if not (is_letter first_char || first_char = '_') then (* The first character must be a letter or '_'*)
-      false
+let is_valid_name (s : string) : bool =
+  if String.length s = 0 then false else
+  let first_char = s.[0] in
+  if not (is_letter first_char || first_char = '_') then false else
+  let rec check_rest i =
+    if i >= String.length s then true
     else
-      let rec check_rest i = 
-        if i >= String.length s then true
-        else
-          let char = s.[i] in
-          if is_letter char || is_digit char || char = '_' then (*Every element must be either a digit, letter, or '_'*)
-            check_rest (i + 1)
-          else
-            false
-      in
-      check_rest 1
+      let ch = s.[i] in
+      if is_letter ch || is_digit ch || ch = '_' then check_rest (i+1)
+      else false
+  in
+  check_rest 1
 
-let is_valid_int (s : string) : bool = (*Brayden Stille*)
-  match int_of_string_opt s with (*Tries to convert the string to an int*)
-    | Some _ -> true (*If string can be converted to an int it will return true*)
-    | None -> false (*If string cannot be converted to an int it will return false*)
+let is_valid_int (s : string) : bool =
+  match int_of_string_opt s with
+  | Some _ -> true
+  | None -> false
 
-let is_quoted_string (s : string) : bool = (*Brayden Stille*)
-  String.length s >= 2 && String.get s 0 = '\"' && String.get s (String.length s - 1) = '\"' 
-  (*Checks if the string is at least 2 characters long and if the first and last characters are quotes*)
+let is_quoted_string (s : string) : bool =
+  String.length s >= 2 && s.[0] = '"' && s.[String.length s - 1] = '"'
 
-
-let string_of_stack_value (v : stack_value) : string =  (*Aaron Massey*)
-  match v with                                              
-    | Int i -> string_of_int i (*Converts an Int to a string*)                      
-    | Str s -> s (*Returns the string*)                   
-    | Name n -> n (*Returns the name*)                   
-    | Bool b -> if b then ":true:" else ":false:" (*Converts a Bool to a string*)       
-    | Error -> ":error:" (*Returns the error as a string*)     
-    | Unit _ -> ":unit:" (*Returns the unit as a string*)                                      
+let string_of_stack_value (v : stack_value) : string =
+  match v with
+  | Int i -> string_of_int i
+  | Str s -> s
+  | Name n -> n
+  | Bool b -> if b then ":true:" else ":false:"
+  | Error -> ":error:"
+  | Unit _ -> ":unit:"
 
 (*-----------------------------------------------------*) 
 (*|                   File Handling                   |*) 
 (*-----------------------------------------------------*) 
 
-(* Read File into FIFO String List (Stack)*)
-let read_lines (filename : string) : string list = (*Aaron Massey*)
-  let ic = open_in filename in (* Open the file *) 
-  let rec loop acc = (* Recursive function that adds lines to list*)
+let read_lines (filename : string) : string list =
+  let ic = open_in filename in
+  let rec loop acc =
     try
-      let line = input_line ic in 
-      loop (line :: acc) (* Add the line to to list *)
-    with End_of_file -> 
-      close_in ic; (* Close the file*)
-      List.rev acc (* Reverse the list so it maintains FIFO order*)
+      let line = input_line ic in
+      loop (line :: acc)
+    with End_of_file ->
+      close_in ic;
+      List.rev acc
   in
   loop []
 
-
-let write_lines (filename : string) (stack : stack) : unit =  (*Aaron Massey*)
-  let oc = open_out filename in (*Open the output file*)
-  try 
-    List.iter (fun line -> output_string oc (string_of_stack_value line ^ "\n")) stack; (*Write each line to the output file*)
-    close_out oc (*Close the output file*)
+let write_lines (filename : string) (stack : stack) : unit =
+  let oc = open_out filename in
+  try
+    List.iter (fun line -> output_string oc (string_of_stack_value line ^ "\n")) stack;
+    close_out oc
   with e ->
-    close_out_noerr oc; (*Close the output file without raising an error*)
-    raise e (*raises the error*)
+    close_out_noerr oc;
+    raise e
 
-let tokenize_command (s : string) : string list = (*Aaron Massey*)
-  let s = String.trim s in (*Trims whitespace from the string*)
-  if String.length s = 0 then [] (*If the string is empty, return an empty list*)
+let tokenize_command (s : string) : string list =
+  let s = String.trim s in
+  if String.length s = 0 then []
+  else match String.index_opt s ' ' with
+       | None -> [s]
+       | Some idx ->
+         let cmd = String.sub s 0 idx in
+         let arg = String.sub s (idx + 1) (String.length s - idx - 1) |> String.trim in
+         [cmd; arg]
+
+(*-----------------------------------------------------*) 
+(*|             Stack Helpers & Pushers               |*) 
+(*-----------------------------------------------------*) 
+
+let pushInt (n : int) (stk : stack) : stack = Int n :: stk
+let pushStr (s : string) (stk : stack) : stack = Str s :: stk
+let pushName (name : string) (stk : stack) : stack = Name name :: stk
+let pushBool (b : bool) (stk : stack) : stack = Bool b :: stk
+let pushError (stk : stack) : stack = Error :: stk
+let pushUnit (u : stack_value option) (stk : stack) : stack =
+  match u with None -> Unit None :: stk | Some v -> Unit (Some v) :: stk
+
+let push (arg : string) (stk : stack) : stack =
+  if is_quoted_string arg then
+    let s = String.sub arg 1 (String.length arg - 2) in
+    pushStr s stk
   else
-    match String.index_opt s ' ' with 
-      | None -> [s] 
-      | Some idx ->
-        let cmd = String.sub s 0 idx in
-        let arg = String.sub s (idx + 1) (String.length s - idx - 1) |> String.trim in [cmd; arg] 
+    match arg with
+    | ":true:" -> pushBool true stk
+    | ":false:" -> pushBool false stk
+    | ":error:" -> pushError stk
+    | ":unit:" -> pushUnit None stk
+    | a when is_valid_name a -> pushName a stk
+    | a when is_valid_int a -> pushInt (int_of_string a) stk
+    | _ -> pushError stk
+
+let pop (stk: stack) : stack =
+  match stk with
+  | [] -> pushError stk
+  | _ :: rest -> rest
+
+let tostring (stk : stack) : stack =
+  match stk with
+  | [] -> pushError stk
+  | v :: rest -> pushStr (string_of_stack_value v) rest
+
+let println (stk : stack) (out : out_channel): stack =
+  match stk with
+  | [] -> pushError stk
+  | v :: rest ->
+      Printf.fprintf out "%s\n" (string_of_stack_value v);
+      rest
 
 (*-----------------------------------------------------*) 
-(*|             Command Implementations               |*) 
+(*|               Environment (Part 2)                |*) 
 (*-----------------------------------------------------*) 
 
-let pushInt (n : int) (stk : stack) : stack = (*Brayden Stille*)
-  Int n :: stk (*Takes an Int (n) and pushes it onto the stack*)
+let add_to_environment (name : string) (value : stack_value) (env : enviroment) : enviroment =
+  (name, value) :: env
 
-let pushStr (s : string) (stk : stack) : stack = (*Brayden Stille*)
-  Str s :: stk (*Takes a String (s) and pushes it onto the stack*)
-
-let pushName (name : string) (stk : stack) : stack = (*Brayden Stille*)
-  Name name :: stk (*Takes a Name (name) and pushes it onto the stack*)
-
-let pushBool (b : bool) (stk : stack) : stack = (*Brayden Stille*)
-  Bool b :: stk (*Takes a Bool (b) and pushes it onto the stack*)
-
-let pushError (stk : stack) : stack = (*Brayden Stille*)
-  Error :: stk (*Takes the stack and pushes an Error onto it*)
-
-let pushUnit (u : stack_value option) (stk : stack) : stack = (*Brayden Stille*)
-  match u with 
-    | None -> Unit None :: stk
-    | Some v -> Unit (Some v) :: stk
-
-let push (arg : string) (stk : stack) : stack = (*Brayden Stille*)
-  if is_quoted_string arg then (*Checks if the argument is wrapped in quotes*)
-    let s = String.sub arg 1 (String.length arg - 2) in (*Removes the quotes from the argument*)
-    pushStr s stk (*Calls the pushStr function with s as the string and the stack as stk*)
-  else
-    match arg with (*matches the push function with the argument*)
-    | ":true:" -> pushBool true stk (*Calls the pushBool function with true and the stack as stk*)
-    | ":false:" -> pushBool false stk (*Calls the pushBool function with false and the stack as stk*)
-    | ":error:" -> pushError stk (*Calls the pushError function with the stack as stk*)
-    | ":unit:" -> pushUnit None stk (*Calls the pushUnit function with the stack as stk*)
-    | arg when is_valid_name arg -> pushName arg stk (*Calls the pushName function with arg as the name and the stack as stk*)
-    | arg when is_valid_int arg -> pushInt (int_of_string arg) stk (*Calls the pushInt function with arg converted to an int and the stack as stk*)
-    | _ -> pushError stk (*If the argument is not valid, calls the pushError function with the stack as stk*)
- 
-let pop (stk: stack) : stack =  (*Aaron Massey*) 
-  match stk with                
-    | [] -> pushError stk
-    | _ :: rest -> rest
-
-let add (stk : stack) : stack = (*Aaron Massey*)
-  match stk with
-    | Int a :: Int b :: rest -> (*If there are two Ints then add them*)
-      pushInt (a + b) rest
-    | Int a :: rest -> (*If there is only one Int, push it back onto the stack with an error*)
-      pushError (Int a :: rest)
-    | _ -> pushError stk (*If there is no Int, push an error*)
-
-let sub (stk : stack) : stack = (*Aaron Massey*)
-  match stk with
-    | Int a :: Int b :: rest -> (*If there are two Ints, subtract them*)
-      pushInt (b - a) rest
-    | Int a :: rest -> (*If there is only one Int, push it back onto the stack with an error*)
-      pushError (Int a :: rest)
-    | _ -> pushError stk (*If there are no Ints, push an error onto the stack*)
-
-let mult (stk : stack) : stack = (*Brayden Stille*)
-  match stk with
-    | Int a :: Int b :: rest ->(*If there are two Ints, multiply them*)
-      pushInt (a * b) rest
-    | Int a :: rest -> (*If there is only one Int, push it back onto the stack with an error*)
-      pushError (Int a :: rest)
-    | _ -> pushError stk (*If there are no Ints. push an error onto the stack*)
-
-let div (stk : stack) : stack = (*Brayden Stille*)
-  match stk with
-    | Int a :: Int b :: rest -> (*If there are two Ints, divide them *)
-      if a = 0 then (*If the denominator is 0, push the Ints back onto the stack with an error*)
-        pushError (Int a :: Int b :: rest)
-      else
-        pushInt (b / a) rest (*If the Ints are valid, divide them*)
-    | Int a :: rest ->
-      pushError (Int a :: rest) (*If there is only one Int, push it back onto the stack with an error*)
-    | _ -> pushError stk (*If there are no Ints, push an error to the stack*)
-
-let rem (stk : stack) : stack = (*Brayden Stille*)
-  match stk with
-    | Int a :: Int b :: rest -> (*If there are two Ints, get the modulo*)
-      if a = 0 then
-        pushError (Int a :: Int b :: rest) (*If the denominator is 0, return the Ints to the stack and push an error*)
-      else
-        pushInt (b mod a) rest (* Otherwise push the modulo (remainder) of the Ints*)
-    | Int a :: rest ->
-      pushError (Int a :: rest) (*If there is only one Int push it to the stack with an error*)
-    | _ -> pushError stk (*If there are no Ints push an error to the stack*)
-
-let sign (stk : stack) : stack = (*Brayden Stille*)
-  match stk with
-    | Int a :: rest -> pushInt (a * -1) rest (*Multiplies the top element of the stack by -1 and pushes it back onto the stack*)
-    | _ -> pushError stk (*If the top element is not an integer, push an error onto the stack*)
-
-let swap (stk : stack) : stack = (*Aaron Massey*)
-  match stk with
-    | a :: b :: rest -> b :: a :: rest (*Swaps the top two elements of the stack*)
-    | _ -> pushError stk (*If there are not enough elements to swap, push an error onto the stack*)
-
-let tostring (stk : stack) : stack = (*Brayden Stille*)
-  match stk with
-    | [] -> pushError stk (*If the stack is empty, push an error onto the stack*)
-    | v :: rest -> pushStr (string_of_stack_value v) rest (*Calls the pushStr function with the string representation of the top stack value*)
-
-let println (stk : stack) (out : out_channel): stack = (*Aaron Massey*)
-  match stk with
-    | [] -> pushError stk (*If the stack is empty, push an error onto the stack*)
-    | v :: rest -> Printf.fprintf out "%s\n" (string_of_stack_value v); rest (*Calls the Printf.fprintf function to print the top stack value to the output channel*)
-
-
-
-(*-----------------------------------------------------*) 
-(*|               Part 2 Functions Code               |*) 
-(*-----------------------------------------------------*) 
-
-(* Environment lookup helpers *)
-
-let rec check_environment (name : string) (env : enviroment): bool =
+let rec fetch_from_environment (name : string) (env : enviroment) : stack_value option =
   match env with
-    | [] -> false
-    | (n, _) :: rest -> if string_of_stack_value n = name then true else check_environment name rest
+  | [] -> None
+  | (n, v) :: rest -> if n = name then Some v else fetch_from_environment name rest
 
-let add_to_environment (name : stack_value) (value : stack_value) (envr : enviroment ref): unit =
-  envr := (name, value) :: !envr
+(* Name dereference only for ops that require concrete values *)
+let rec value_for_op (env : enviroment) (v : stack_value) : stack_value =
+  match v with
+  | Name n ->
+      (match fetch_from_environment n env with
+       | None -> Error
+       | Some (Name _ as nv) -> value_for_op env nv
+       | Some other -> other)
+  | other -> other
 
-let remove_from_environment (name : stack_value) (envr : enviroment ref): unit =
-  let key = string_of_stack_value name in
-  envr := List.filter (fun (n, _) -> string_of_stack_value n <> key) !envr
+(*-----------------------------------------------------*) 
+(*|          Arithmetic / Boolean / String Ops        |*) 
+(*-----------------------------------------------------*) 
 
-let fetch_from_environment (name : string) (envr : enviroment ref): stack_value =
-  let key = name in
-  match List.find_opt (fun (n, _) -> string_of_stack_value n = key) !envr with
-  | None -> Error
-  | Some (_, v) -> v
-
-(* String ops / booleans / comparisons *)
-
-let cat (stk : stack) : stack =
+let add (env: enviroment) (stk : stack) : stack * enviroment =
   match stk with
-    | Str a :: Str b :: rest -> pushStr (b ^ a) rest
-    | _ -> pushError stk
+  | a :: b :: rest ->
+      let va = value_for_op env a and vb = value_for_op env b in
+      (match va, vb with
+       | Int x, Int y -> (pushInt (y + x) rest, env)
+       | _ -> (pushError (a :: b :: rest), env))
+  | _ -> (pushError stk, env)
 
-let and_ (stk : stack) : stack = 
+let sub (env: enviroment) (stk : stack) : stack * enviroment =
   match stk with
-    | Bool a :: Bool b :: rest -> pushBool (b && a) rest
-    | _ -> pushError stk
+  | a :: b :: rest ->
+      let va = value_for_op env a and vb = value_for_op env b in
+      (match va, vb with
+       | Int x, Int y -> (pushInt (y - x) rest, env)
+       | _ -> (pushError (a :: b :: rest), env))
+  | _ -> (pushError stk, env)
 
-let or_ (stk: stack) : stack = 
+let mult (env: enviroment) (stk : stack) : stack * enviroment =
   match stk with
-    | Bool a :: Bool b :: rest -> pushBool (b || a) rest
-    | _ -> pushError stk
+  | a :: b :: rest ->
+      let va = value_for_op env a and vb = value_for_op env b in
+      (match va, vb with
+       | Int x, Int y -> (pushInt (y * x) rest, env)
+       | _ -> (pushError (a :: b :: rest), env))
+  | _ -> (pushError stk, env)
 
-let not_ (stk: stack) : stack = 
+let div (env: enviroment) (stk : stack) : stack * enviroment =
   match stk with
-    | Bool a :: rest -> pushBool (not a) rest
-    | _ -> pushError stk
+  | a :: b :: rest ->
+      let va = value_for_op env a and vb = value_for_op env b in
+      (match va, vb with
+       | Int x, Int y ->
+           if x = 0 then (pushError (a :: b :: rest), env)
+           else (pushInt (y / x) rest, env)
+       | _ -> (pushError (a :: b :: rest), env))
+  | _ -> (pushError stk, env)
 
-let equal_ (stk: stack) : stack = 
+let rem (env: enviroment) (stk : stack) : stack * enviroment =
   match stk with
-    | Int a :: Int b :: rest -> pushBool (a = b) rest
-    | _ -> pushError stk
+  | a :: b :: rest ->
+      let va = value_for_op env a and vb = value_for_op env b in
+      (match va, vb with
+       | Int x, Int y ->
+           if x = 0 then (pushError (a :: b :: rest), env)
+           else (pushInt (y mod x) rest, env)
+       | _ -> (pushError (a :: b :: rest), env))
+  | _ -> (pushError stk, env)
 
-let lessThan_ (stk: stack) : stack = 
+let sign (env: enviroment) (stk : stack) : stack * enviroment =
   match stk with
-    | Int a :: Int b :: rest -> pushBool (b < a) rest
-    | _ -> pushError stk
+  | a :: rest ->
+      (match value_for_op env a with
+       | Int x -> (pushInt (-x) rest, env)
+       | _ -> (pushError (a :: rest), env))
+  | _ -> (pushError stk, env)
 
-let greaterThan_ (stk: stack) : stack = 
+let swap (env: enviroment) (stk : stack) : stack * enviroment =
   match stk with
-    | Int a :: Int b :: rest -> pushBool (b > a) rest
-    | _ -> pushError stk
+  | a :: b :: rest -> (b :: a :: rest, env)
+  | _ -> (pushError stk, env)
 
-(* assign: <value> <Name n> assign  => binds n=value in current scope, pushes :unit: *)
-let assign (envr : enviroment ref) (stk: stack) : stack = 
+let cat (env: enviroment) (stk : stack) : stack * enviroment =
   match stk with
-    | v :: Name n :: rest ->
-        begin match v with
-        | Int _ | Str _ | Bool _ | Unit _ ->
-            add_to_environment (Name n) v envr;
-            pushUnit None rest
-        | Name _ | Error ->
-            pushError stk
-        end
-    | _ -> pushError stk
+  | a :: b :: rest ->
+      (match value_for_op env a, value_for_op env b with
+       | Str x, Str y -> (pushStr (y ^ x) rest, env)
+       | _ -> (pushError (a :: b :: rest), env))
+  | _ -> (pushError stk, env)
 
-(* if:  <trueVal> <falseVal> <Bool cond> if  => pushes selected value *)
-let if_ (stk: stack) : stack = 
-  match stk with 
-    | trueVal :: falseVal :: Bool condition :: rest ->
-      if condition then
-        trueVal :: rest
-      else
-        falseVal :: rest
-    | _ -> pushError stk
+let and_ (env: enviroment) (stk : stack) : stack * enviroment =
+  match stk with
+  | a :: b :: rest ->
+      (match value_for_op env a, value_for_op env b with
+       | Bool x, Bool y -> (pushBool (y && x) rest, env)
+       | _ -> (pushError (a :: b :: rest), env))
+  | _ -> (pushError stk, env)
 
-(* let: pushes a scope marker on stack and into env *)
-let let_ (envr : enviroment ref) (stk: stack) : stack =
-  add_to_environment scope_marker (Unit None) envr;
-  scope_marker :: stk
+let or_ (env: enviroment) (stk : stack) : stack * enviroment =
+  match stk with
+  | a :: b :: rest ->
+      (match value_for_op env a, value_for_op env b with
+       | Bool x, Bool y -> (pushBool (y || x) rest, env)
+       | _ -> (pushError (a :: b :: rest), env))
+  | _ -> (pushError stk, env)
 
-(* end: pop to scope marker in both env and stack; result is value just before marker (or :unit:) *)
-let end_ (envr : enviroment ref) (stk: stack) : stack =
-  let rec pop_to_marker carry s =
+let not_ (env: enviroment) (stk : stack) : stack * enviroment =
+  match stk with
+  | a :: rest ->
+      (match value_for_op env a with
+       | Bool x -> (pushBool (not x) rest, env)
+       | _ -> (pushError (a :: rest), env))
+  | _ -> (pushError stk, env)
+
+let equal_ (env: enviroment) (stk : stack) : stack * enviroment =
+  match stk with
+  | a :: b :: rest ->
+      (match value_for_op env a, value_for_op env b with
+       | Int x, Int y -> (pushBool (x = y) rest, env)
+       | _ -> (pushError (a :: b :: rest), env))
+  | _ -> (pushError stk, env)
+
+let lessThan_ (env: enviroment) (stk : stack) : stack * enviroment =
+  match stk with
+  | a :: b :: rest ->
+      (match value_for_op env a, value_for_op env b with
+       | Int x, Int y -> (pushBool (y < x) rest, env)
+       | _ -> (pushError (a :: b :: rest), env))
+  | _ -> (pushError stk, env)
+
+let greaterThan_ (env: enviroment) (stk : stack) : stack * enviroment =
+  match stk with
+  | a :: b :: rest ->
+      (match value_for_op env a, value_for_op env b with
+       | Int x, Int y -> (pushBool (y > x) rest, env)
+       | _ -> (pushError (a :: b :: rest), env))
+  | _ -> (pushError stk, env)
+
+(*-----------------------------------------------------*) 
+(*|               assign / if / let / end             |*) 
+(*-----------------------------------------------------*) 
+
+let assign (env : enviroment) (stk: stack) : stack * enviroment =
+  match stk with
+  | v :: Name n :: rest ->
+      let rv = value_for_op env v in
+      (match rv with
+       | Int _ | Str _ | Bool _ | Unit _ ->
+           let env2 = add_to_environment n rv env in
+           (pushUnit None rest, env2)
+       | _ -> (pushError (v :: Name n :: rest), env))
+  | _ -> (pushError stk, env)
+
+let if_ (env: enviroment) (stk: stack) : stack * enviroment =
+  match stk with
+  | x :: y :: z :: rest ->
+      (match value_for_op env z with
+       | Bool true -> (x :: rest, env)
+       | Bool false -> (y :: rest, env)
+       | _ -> (pushError (x :: y :: z :: rest), env))
+  | _ -> (pushError stk, env)
+
+let let_ (env : enviroment) (stk: stack) : stack * enviroment =
+  let env2 = add_to_environment scope_marker_str (Unit None) env in
+  (scope_marker :: stk, env2)
+
+(* end without a variable named carry; also no primes in names *)
+let end_ (env : enviroment) (stk: stack) : stack * enviroment =
+  let rec scan_until_marker s top_opt =
     match s with
     | [] -> None
     | x :: xs ->
-        if x = scope_marker then Some (carry, xs)
-        else pop_to_marker (Some x) xs
+        if x = scope_marker then Some (top_opt, xs)
+        else
+          let next_top =
+            match top_opt with
+            | None -> Some x
+            | Some v -> Some v
+          in
+          scan_until_marker xs next_top
   in
-  match pop_to_marker None stk with
-  | None -> pushError stk
-  | Some (carry_opt, rest_after_marker) ->
-      let rec pop_env_until_marker e =
+  match scan_until_marker stk None with
+  | None -> (pushError stk, env)
+  | Some (maybe_top, rest_after_marker) ->
+      let rec drop_env_until_marker e =
         match e with
         | [] -> []
-        | (n, _) :: xs ->
-            if n = scope_marker then xs
-            else pop_env_until_marker xs
+        | (k, _) :: xs ->
+            if k = scope_marker_str then xs
+            else drop_env_until_marker xs
       in
-      envr := pop_env_until_marker !envr;
-      let result = match carry_opt with Some v -> v | None -> Unit None in
-      result :: rest_after_marker
-
-
+      let env2 = drop_env_until_marker env in
+      let result = match maybe_top with Some v -> v | None -> Unit None in
+      (result :: rest_after_marker, env2)
 
 (*-----------------------------------------------------*) 
 (*|               Main Interpreter Code               |*) 
 (*-----------------------------------------------------*) 
 
-let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey and Brayden Stille*)
+let interpreter ((input : string), (output : string)) : unit =
   let lines = read_lines input in
-  let oc = open_out output in 
-  let enviroment : enviroment ref = ref [] in 
-  
-  let rec execute (commands : string list) (stk : stack) : stack = (*Aaron Massey and Brayden Stille*)
+  let oc = open_out output in
+
+  let rec execute (commands : string list) (stk : stack) (env : enviroment) : stack * enviroment =
     match commands with
-    | [] -> stk (*If there are no commands left return the stack*)
-    | cmd :: rest -> (*If there is a command left, turn it to a string then match it with the function*)
-      let trimmed_cmd = String.trim cmd in (*Trims the whitespace from the command*)
-      let tokens = tokenize_command trimmed_cmd in (*Tokenizes the command into a list of strings*)
-      let new_stk = (*executes the command and returns the new stack*)
-        match tokens with
-        | ["push"; arg] -> push arg stk (*If command is push; push function is called*)
-        | ["pop"] -> pop stk (*If command is pop; pop function is called*)
-        | ["add"] -> add stk (*If command is add; add function is called*)
-        | ["sub"] -> sub stk (*If command is sub; sub function is called*)
-        | ["mult"] -> mult stk (*If command is mult; mult function is called*)
-        | ["div"] -> div stk (*If command is div; div function is called*)
-        | ["rem"] -> rem stk (*If command is rem; rem function is called*)
-        | ["sign"] -> sign stk (*If command is sign; sign function is called*)
-        | ["swap"] -> swap stk (*If command is swap; swap function is called*)
-        | ["toString"] -> tostring stk (*If command is toString; tostring function is called*)
-        | ["println"] -> println stk oc (*If command is println; println function is called*)
-        | ["quit"] -> stk (*If command is quit; return the stack and stop executing*)
-        | ["cat"] -> cat stk (*If command is cat; cat function is called*)
-        | ["and"] -> and_ stk
-        | ["or"] -> or_ stk
-        | ["not"] -> not_ stk
-        | ["equal"] -> equal_ stk
-        | ["lessThan"] -> lessThan_ stk
-        | ["greaterThan"] -> greaterThan_ stk
-        | ["assign"] -> assign enviroment stk
-        | ["if"] -> if_ stk
-        | ["let"] -> let_ enviroment stk
-        | ["end"] -> end_ enviroment stk
-        | _ -> pushError stk (*If command is not recognized; pushError function is called*)
-      in
-      if tokens = ["quit"] then (*If command is quit; return the stack and stop executing*)
-        new_stk (*Return the new stack*)
-      else
-        execute rest new_stk (*Continue executing the rest of the commands*)
+    | [] -> (stk, env)
+    | cmd :: rest ->
+        let trimmed_cmd = String.trim cmd in
+        let tokens = tokenize_command trimmed_cmd in
+        let (new_stk, new_env) =
+          match tokens with
+          | ["push"; arg] -> (push arg stk, env)
+          | ["pop"] -> (pop stk, env)
+          | ["add"] -> add env stk
+          | ["sub"] -> sub env stk
+          | ["mult"] -> mult env stk
+          | ["div"] -> div env stk
+          | ["rem"] -> rem env stk
+          | ["sign"] -> sign env stk
+          | ["swap"] -> swap env stk
+          | ["toString"] -> (tostring stk, env)
+          | ["println"] -> (println stk oc, env)
+          | ["cat"] -> cat env stk
+          | ["and"] -> and_ env stk
+          | ["or"] -> or_ env stk
+          | ["not"] -> not_ env stk
+          | ["equal"] -> equal_ env stk
+          | ["lessThan"] -> lessThan_ env stk
+          | ["greaterThan"] -> greaterThan_ env stk
+          | ["assign"] -> assign env stk
+          | ["if"] -> if_ env stk
+          | ["let"] -> let_ env stk
+          | ["end"] -> end_ env stk
+          | ["quit"] -> (stk, env)
+          | _ -> (pushError stk, env)
+        in
+        if tokens = ["quit"] then (new_stk, new_env) else execute rest new_stk new_env
   in
-  let final_stack = execute lines [] in (*Start executing the commands with an empty stack*)
-  write_lines output final_stack; (*Write the final stack to the output file*)
-  close_out oc (*close output channel*)
+
+  let (final_stack, _) = execute lines [] [] in
+  write_lines output final_stack;
+  close_out oc
 
 (*-----------------------------------------------------*)
 (*|        Manually change filenames for now          |*)
 (*-----------------------------------------------------*)
 let () =
-  interpreter ("input1-1.txt", "output/output1.txt");
-  interpreter ("input2-1.txt", "output/output2.txt");
-  interpreter ("input3-1.txt", "output/output3.txt");
-  interpreter ("input4-1.txt", "output/output4.txt");
-  interpreter ("input5-1.txt", "output/output5.txt");
-  interpreter ("input6-1.txt", "output/output6.txt");
-  interpreter ("input7-1.txt", "output/output7.txt");
-  interpreter ("input8-1.txt", "output/output8.txt");
-  interpreter ("input9-1.txt", "output/output9.txt");
-  interpreter ("input10-1.txt", "output/output10.txt");
+  interpreter ("input1.txt", "output1.txt");
+  interpreter ("input2.txt", "output2.txt");
+  interpreter ("input3.txt", "output3.txt");
+  interpreter ("input4.txt", "output4.txt");
+  interpreter ("input5.txt", "output5.txt");
+  interpreter ("input6.txt", "output6.txt");
+  interpreter ("input7.txt", "output7.txt");
+  interpreter ("input8.txt", "output8.txt");
+  interpreter ("input9.txt", "output9.txt");
+  interpreter ("input10.txt", "output10.txt");
