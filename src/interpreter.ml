@@ -15,11 +15,12 @@ type stack_value = (*Aaron Massey*)
   | Name of string                                          
   | Bool of bool                                            
   | Error                                                   
-  | Unit                             
+  | Unit of stack_value option  
                                                             
                                                            
 type stack = stack_value list  (*Aaron Massey*)                             
 
+type enviroment = (stack_value * stack_value) list  (*Aaron Massey*)
 
 (*-----------------------------------------------------*) 
 (*|                  Type Validation                  |*) 
@@ -65,7 +66,7 @@ let string_of_stack_value (v : stack_value) : string =  (*Aaron Massey*)
     | Name n -> n (*Returns the name*)                   
     | Bool b -> if b then ":true:" else ":false:" (*Converts a Bool to a string*)       
     | Error -> ":error:" (*Returns the error as a string*)     
-    | Unit -> ":unit:" (*Returns the unit as a string*)                                      
+    | Unit _ -> ":unit:" (*Returns the unit as a string*)                                      
 
 (*-----------------------------------------------------*) 
 (*|                   File Handling                   |*) 
@@ -128,8 +129,10 @@ let pushBool (b : bool) (stk : stack) : stack = (*Brayden Stille*)
 let pushError (stk : stack) : stack = (*Brayden Stille*)
   Error :: stk (*Takes the stack and pushes an Error onto it*)
 
-let pushUnit (stk : stack) : stack = (*Brayden Stille*)
-  Unit :: stk (*Takes the stack and pushes a Unit onto it*)
+let pushUnit (u : stack_value option) (stk : stack) : stack = (*Brayden Stille*)
+  match u with 
+    | None -> Unit None :: stk
+    | Some v -> Unit (Some v) :: stk
 
 let push (arg : string) (stk : stack) : stack = (*Brayden Stille*)
   if is_quoted_string arg then (*Checks if the argument is wrapped in quotes*)
@@ -140,7 +143,7 @@ let push (arg : string) (stk : stack) : stack = (*Brayden Stille*)
     | ":true:" -> pushBool true stk (*Calls the pushBool function with true and the stack as stk*)
     | ":false:" -> pushBool false stk (*Calls the pushBool function with false and the stack as stk*)
     | ":error:" -> pushError stk (*Calls the pushError function with the stack as stk*)
-    | ":unit:" -> pushUnit stk (*Calls the pushUnit function with the stack as stk*)
+    | ":unit:" -> pushUnit None stk (*Calls the pushUnit function with the stack as stk*)
     | arg when is_valid_name arg -> pushName arg stk (*Calls the pushName function with arg as the name and the stack as stk*)
     | arg when is_valid_int arg -> pushInt (int_of_string arg) stk (*Calls the pushInt function with arg converted to an int and the stack as stk*)
     | _ -> pushError stk (*If the argument is not valid, calls the pushError function with the stack as stk*)
@@ -223,6 +226,20 @@ let println (stk : stack) (out : out_channel): stack = (*Aaron Massey*)
 (*|               Part 2 Functions Code               |*) 
 (*-----------------------------------------------------*) 
 
+let rec check_environment (name : string) (env : enviroment): bool =
+  match env with
+    | [] -> false
+    | (n, v) :: rest -> if string_of_stack_value n = name then true else check_environment name rest
+
+let add_to_environment (name : stack_value) (value : stack_value) (env : enviroment): unit =
+  () (*STUB*)
+
+let remove_from_environment (name : stack_value) (env : enviroment): unit =
+  () (*STUB*)
+
+let fetch_from_environment (name : string) (env : enviroment): stack_value =
+  Unit None(*STUB*)
+  
 let cat (stk : stack) : stack =
   match stk with
     | Str a :: Str b :: rest -> pushStr (b ^ a) rest
@@ -253,12 +270,18 @@ let lessThan_ (stk: stack) : stack =
     | Int a :: Int b :: rest -> pushBool (b < a) rest
     | _ -> pushError stk
 
+let greaterThan_ (stk: stack) : stack = 
+  match stk with
+    | Int a :: Int b :: rest -> pushBool (b > a) rest
+    | _ -> pushError stk
+
 let assign (stk: stack) : stack = 
-  match stk with 
+  match stk with
     | Int i :: Name n :: rest -> stk (*STUB*) 
     | Bool b :: Name n :: rest ->stk (*STUB*) 
     | Str s :: Name n :: rest ->stk (*STUB*) 
-    | Unit :: Name n :: rest ->stk (*STUB*) 
+    | Unit None :: Name n :: rest ->stk (*STUB*)
+    | Unit Some a:: Name n :: rest -> stk (*STUB*)
     | Name a :: Name n :: rest ->stk (*STUB*) 
     | _ -> pushError stk
 
@@ -288,7 +311,7 @@ let end_ (stk: stack) : stack =
 let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey and Brayden Stille*)
   let lines = read_lines input in
   let oc = open_out output in 
-
+  let enviroment = [] in 
   
   let rec execute (commands : string list) (stk : stack) : stack = (*Aaron Massey and Brayden Stille*)
     match commands with
@@ -337,14 +360,14 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
 (*|        Manually change filenames for now          |*)
 (*-----------------------------------------------------*)
 let () =
-  interpreter ("input1-1.txt", "output1.txt");
-  interpreter ("input2-1.txt", "output2.txt");
-  interpreter ("input3-1.txt", "output3.txt");
-  interpreter ("input4-1.txt", "output4.txt");
-  interpreter ("input5-1.txt", "output5.txt");
-  interpreter ("input6-1.txt", "output6.txt");
-  interpreter ("input7-1.txt", "output7.txt");
-  interpreter ("input8-1.txt", "output8.txt");
-  interpreter ("input9-1.txt", "output9.txt");
-  interpreter ("input10-1.txt", "output10.txt");
+  interpreter ("input1-1.txt", "output/output1.txt");
+  interpreter ("input2-1.txt", "output/output2.txt");
+  interpreter ("input3-1.txt", "output/output3.txt");
+  interpreter ("input4-1.txt", "output/output4.txt");
+  interpreter ("input5-1.txt", "output/output5.txt");
+  interpreter ("input6-1.txt", "output/output6.txt");
+  interpreter ("input7-1.txt", "output/output7.txt");
+  interpreter ("input8-1.txt", "output/output8.txt");
+  interpreter ("input9-1.txt", "output/output9.txt");
+  interpreter ("input10-1.txt", "output/output10.txt");
 
