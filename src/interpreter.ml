@@ -244,7 +244,7 @@ let rec fetch_from_environment (name : string) (env : enviroment): stack_value =
           if string_of_stack_value n = name then v  
           else fetch_from_environment name rest
 
-let reassign_in_environment (name : stack_value) (value : stack_value) (env : enviroment): enviroment =
+let replace_in_environment (name : stack_value) (value : stack_value) (env : enviroment): enviroment =
   let env_without_name = remove_from_environment name env in
   add_to_environment name value env_without_name
   
@@ -278,14 +278,58 @@ let lessThan_ (stk: stack) : stack =
     | Int a :: Int b :: rest -> pushBool (b < a) rest
     | _ -> pushError stk
 
-let assign (stk: stack) : stack = 
+let assign (env : enviroment) (stk: stack) : stack * enviroment= 
   match stk with 
-    | Int i :: Name n :: rest -> stk (*STUB*) 
-    | Bool b :: Name n :: rest ->stk (*STUB*) 
-    | Str s :: Name n :: rest ->stk (*STUB*) 
-    | Unit  :: Name n :: rest ->stk (*STUB*)
-    | Name a :: Name n :: rest ->stk (*STUB*) 
-    | _ -> pushError stk
+    | Int i :: Name n :: rest -> 
+      let name_sv = Name n in
+      let env_new =
+        if check_environment n env then
+        replace_in_environment name_sv (Int i) env
+        else
+        add_to_environment name_sv (Int i) env
+      in
+      (Unit::rest, env_new)
+    | Bool b :: Name n :: rest -> 
+      let name_sv = Name n in
+      let env_new =
+        if check_environment n env then
+        replace_in_environment name_sv (Bool b) env
+        else
+        add_to_environment name_sv (Bool b) env
+      in
+      (Unit::rest, env_new)
+    | Str s :: Name n :: rest -> 
+      let name_sv = Name n in
+      let env_new =
+        if check_environment n env then
+        replace_in_environment name_sv (Str s) env
+        else
+        add_to_environment name_sv (Str s) env
+      in 
+      (Unit::rest, env_new)
+    | Unit  :: Name n :: rest -> 
+      let name_vs = Name n in
+      let env_new =
+        if check_environment n env then
+        replace_in_environment name_vs (Unit) env
+        else
+        add_to_environment name_vs (Unit) env
+      in 
+      (Unit::rest, env_new)
+    | Name a :: Name n :: rest ->
+      let name_sv = Name n in
+      if check_environment a env then
+        let value = fetch_from_environment a env in
+        let env_new =
+          if check_environment n env then
+          replace_in_environment name_sv value env
+          else
+          add_to_environment name_sv value env
+        in
+        (Unit::rest, env_new)
+      else
+        (pushError stk, env)
+    | _ -> (pushError stk , env)
 
 let if_ (stk: stack) : stack = 
   match stk with 
@@ -340,7 +384,7 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
         | ["not"] -> not_ stk
         | ["equal"] -> equal_ stk
         | ["lessThan"] -> lessThan_ stk
-        | ["assign"] -> assign stk
+        | ["assign"] -> assign env stk
         | ["if"] -> if_ stk
         | ["let"] -> let_ stk
         | ["end"] -> end_ stk
