@@ -14,7 +14,7 @@ Potentially store assigned elements in a dictionary?
 
 should create a new element in the dictionary using a as the key which stores the value 3 
 
-something along the lines of 
+
 match stk with
   | Name n :: val :: rest -> 
     (match val with 
@@ -39,4 +39,18 @@ match stk with
 
 
   CHANGE UNIT TO STORE NAME SO THAT IT CAN BE USED TO REPRESENT VARIABLES
-  WHEN UNIT IS POPPED FROM STACK, MAKE IT RETURN VALUE STORED BY NAME 
+
+
+
+
+Create Int_arith function with signature "stack -> environment -> operation -> stack*environment "
+
+type Operation =
+  | Add
+  | Sub
+  | Mult
+  | Div
+  | Rem
+  | Sign 
+
+
