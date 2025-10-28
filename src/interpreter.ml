@@ -35,6 +35,7 @@ type environment = var list  (*Aaron Massey*)
 
 type env_stack = (environment * stack) list 
 
+type enviroment = (stack_value * stack_value) list  (*Aaron Massey*)
 
 (*-----------------------------------------------------*) 
 (*|                  Type Validation                  |*) 
