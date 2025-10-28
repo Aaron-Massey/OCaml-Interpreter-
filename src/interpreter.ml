@@ -338,18 +338,19 @@ let assign (stk : stack) (env : enviroment) : stack * enviroment=
       (Unit::rest, env_new)
     | Name a :: Name n :: rest ->
       let name_sv = Name n in
-      if check_environment a env then
-        let value = fetch_from_environment a env in
+      let value = fetch_from_environment a env in
+      if value = Error then
+        pushError stk env
+      else
         let env_new =
           if check_environment n env then
           replace_in_environment name_sv value env
           else
           add_to_environment name_sv value env
-        in
+        in 
         (Unit::rest, env_new)
-      else
-        (pushError stk env)
-    | _ -> (pushError stk  env)
+    | _ :: rest -> pushError rest env 
+    | [] -> pushError stk env
 
 let if_ (stk: stack) (env : enviroment): stack*enviroment = 
   match stk with 
@@ -429,14 +430,13 @@ let final_stack = execute lines [] [] in (*Start executing the commands with an 
 (*|        Manually change filenames for now          |*)
 (*-----------------------------------------------------*)
 let () =
-  interpreter ("input1-1.txt", "output/output1.txt");
-  interpreter ("input2-1.txt", "output/output2.txt");
-  interpreter ("input3-1.txt", "output/output3.txt");
-  interpreter ("input4-1.txt", "output/output4.txt");
-  interpreter ("input5-1.txt", "output/output5.txt");
-  interpreter ("input6-1.txt", "output/output6.txt");
-  interpreter ("input7-1.txt", "output/output7.txt");
-  interpreter ("input8-1.txt", "output/output8.txt");
-  interpreter ("input9-1.txt", "output/output9.txt");
-  interpreter ("input10-1.txt", "output/output10.txt");
-
+  let directories = ["Part_1_Tests" ; "Part_2_Tests"] in
+  let filenames = ["input1.txt";"input2.txt";"input3.txt";"input4.txt";"input5.txt";
+                 "input6.txt";"input7.txt";"input8.txt";"input9.txt";"input10.txt"] in 
+  List.iter (fun dir ->
+    List.iter (fun file ->
+      let input_path = dir ^ "/In/" ^ file in
+      let output_path = dir ^ "/Out/" ^ String.sub file 0 (String.length file - 4) ^ "_output.txt" in
+      interpreter (input_path, output_path)
+    ) filenames
+  ) directories;
