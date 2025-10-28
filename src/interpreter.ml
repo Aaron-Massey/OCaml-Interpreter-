@@ -30,7 +30,11 @@ type boolean_op =
                                                            
 type stack = stack_value list  (*Aaron Massey*)                             
 type var = (stack_value * stack_value)
-type enviroment = var list  (*Aaron Massey*)
+
+type environment = var list  (*Aaron Massey*)
+
+type env_stack = (environment * stack) list 
+
 
 (*-----------------------------------------------------*) 
 (*|                  Type Validation                  |*) 
@@ -70,7 +74,7 @@ let is_quoted_string (s : string) : bool = (*Brayden Stille*)
 
 
 let string_of_stack_value (v : stack_value) : string =  (*Aaron Massey*)
-  match v with                                              
+  match v with                                                
     | Int i -> string_of_int i (*Converts an Int to a string*)                      
     | Str s -> s (*Returns the string*)                   
     | Name n -> n (*Returns the name*)                   
@@ -125,25 +129,25 @@ let tokenize_command (s : string) : string list = (*Aaron Massey*)
 (*-----------------------------------------------------*) 
 
 
-let pushInt (n : int) (stk : stack) (env : enviroment): stack * enviroment = (*Brayden Stille*)
+let pushInt (n : int) (stk : stack) (env : env_stack): stack * env_stack = (*Brayden Stille*)
   (Int n :: stk, env) (*Takes an Int (n) and pushes it onto the stack*)
 
-let pushStr (s : string) (stk : stack) (env : enviroment): stack * enviroment = (*Brayden Stille*)
+let pushStr (s : string) (stk : stack) (env : env_stack): stack * env_stack = (*Brayden Stille*)
   (Str s :: stk, env) (*Takes a String (s) and pushes it onto the stack*)
 
-let pushName (name : string) (stk : stack) (env : enviroment): stack * enviroment = (*Brayden Stille*)
+let pushName (name : string) (stk : stack) (env : env_stack): stack * env_stack = (*Brayden Stille*)
   (Name name :: stk, env) (*Takes a Name (name) and pushes it onto the stack*)
 
-let pushBool (b : bool) (stk : stack) (env : enviroment): stack * enviroment = (*Brayden Stille*)
+let pushBool (b : bool) (stk : stack) (env : env_stack): stack * env_stack = (*Brayden Stille*)
   (Bool b :: stk, env) (*Takes a Bool (b) and pushes it onto the stack*)
 
-let pushError (stk : stack) (env : enviroment): stack * enviroment = (*Brayden Stille*)
+let pushError (stk : stack) (env : env_stack): stack * env_stack = (*Brayden Stille*)
   (Error :: stk, env) (*Takes the stack and pushes an Error onto it*)
 
-let pushUnit (stk : stack) (env : enviroment): stack * enviroment = (*Brayden Stille*)
+let pushUnit (stk : stack) (env : env_stack): stack * env_stack = (*Brayden Stille*)
   (Unit :: stk, env)
 
-let push (arg : string) (stk : stack) (env : enviroment): stack * enviroment = (*Brayden Stille*)
+let push (arg : string) (stk : stack) (env : env_stack): stack * env_stack = (*Brayden Stille*)
   if is_quoted_string arg then (*Checks if the argument is wrapped in quotes*)
     let s = String.sub arg 1 (String.length arg - 2) in (*Removes the quotes from the argument*)
       pushStr s stk env (*Calls the pushStr function with s as the string and the stack as stk*)
@@ -158,13 +162,13 @@ let push (arg : string) (stk : stack) (env : enviroment): stack * enviroment = (
     | _ -> pushError stk env (*If the argument is not valid, calls the pushError function with the stack as stk*)
  
 
-let pop (stk: stack) (env : enviroment): stack * enviroment=  (*Aaron Massey*) (*Might need to rework*)
+let pop (stk: stack) (env : env_stack): stack * env_stack=  (*Aaron Massey*)
   match stk with                
     | [] -> pushError stk env
     | _ :: rest -> (rest, env) 
 
 
-let int_arithmatic (op : operation) (stk: stack) (env : enviroment) : stack * enviroment = 
+let int_arithmatic (op : operation) (stk: stack) (env : env_stack) : stack * env_stack = 
   match op with 
     | Add -> ( 
       match stk with
@@ -190,7 +194,8 @@ let int_arithmatic (op : operation) (stk: stack) (env : enviroment) : stack * en
           if a = 0 then (*If the denominator is 0, push the Ints back onto the stack with an error*)
             pushError (Int a :: Int b :: rest) env
           else
-            pushInt (b / a) rest env(*If the Ints are valid, divide them*)
+       
+     pushInt (b / a) rest env(*If the Ints are valid, divide them*)
         | _ -> pushError stk env  (*If there are no Ints, push an error to the stack*)
     ) 
     | Rem ->  (
@@ -199,30 +204,32 @@ let int_arithmatic (op : operation) (stk: stack) (env : enviroment) : stack * en
           if a = 0 then
             pushError (Int a :: Int b :: rest) env (*If the denominator is 0, return the Ints to the stack and push an error*)
           else
-            pushInt (b mod a) rest env (* Otherwise push the modulo (remainder) of the Ints*)
+      
+      pushInt (b mod a) rest env (* Otherwise push the modulo (remainder) of the Ints*)
         | _ -> pushError stk env (*If there are no Ints push an error to the stack*)
     ) 
-let arithmatic_helper (op : operation) (stk: stack) (env : enviroment) : stack * enviroment = 
+
+let arithmatic_helper (op : operation) (stk: stack) (env : env_stack) : stack * env_stack = 
   match stk with 
     | Int a :: Int b :: rest -> int_arithmatic op stk env
     | _ -> pushError stk env
 
-let sign (stk : stack) (env : enviroment): stack * enviroment = (*Aaron Massey*)
+let sign (stk : stack) (env : env_stack): stack * env_stack = (*Aaron Massey*)
   match stk with 
     | Int a :: rest -> pushInt (a * -1) rest env (*If there is an Int, multiply it by -1*)
     | _ -> pushError stk env (*If there is no Int, push an error to the stack*)
 
-let swap (stk : stack) (env: enviroment): stack * enviroment = (*Aaron Massey*)
+let swap (stk : stack) (env: env_stack): stack * env_stack = (*Aaron Massey*)
   match stk with
     | a :: b :: rest -> ((b :: a :: rest), env)(*Swaps the top two elements of the stack*)
     | _ -> pushError stk env (*If there are not enough elements to swap, push an error onto the stack*)
 
-let tostring (stk : stack) (env : enviroment): stack * enviroment = (*Brayden Stille*)
+let tostring (stk : stack) (env : env_stack): stack * env_stack = (*Brayden Stille*)
   match stk with
     | [] -> pushError stk env(*If the stack is empty, push an error onto the stack*)
     | v :: rest -> pushStr (string_of_stack_value v) rest env (*Calls the pushStr function with the string representation of the top stack value*)
 
-let println (out : out_channel) (stk : stack) (env : enviroment) : stack*enviroment = (*Aaron Massey*)
+let println (out : out_channel) (stk : stack) (env : env_stack) : stack*env_stack = (*Aaron Massey*)
   match stk with
     | [] -> pushError stk env (*If the stack is empty, push an error onto the stack*)
     | v :: rest -> Printf.fprintf out "%s\n" (string_of_stack_value v); (rest, env) (*Calls the Printf.fprintf function to print the top stack value to the output channel*)
@@ -233,38 +240,53 @@ let println (out : out_channel) (stk : stack) (env : enviroment) : stack*envirom
 (*|               Part 2 Functions Code               |*) 
 (*-----------------------------------------------------*) 
 
-let rec check_environment (name : string) (env : enviroment): bool =
-  match env with
-    | [] -> false
-    | (n, v) :: rest -> if string_of_stack_value n = name then true else check_environment name rest
 
-let add_to_environment (name : stack_value) (value : stack_value) (env : enviroment): enviroment =
-  (name, value) :: env 
-
-let remove_from_environment (name : stack_value) (env : enviroment): enviroment =
-  let key = string_of_stack_value name in
-  List.filter(fun(n,_) -> string_of_stack_value n <> key) env
-
-let rec fetch_from_environment (name : string) (env : enviroment): stack_value =
-  match env with
+let rec fetch_from_environment_list (name : string) (env_list : environment): stack_value =
+  match env_list with
     | [] -> Error 
     | (n, v) :: rest -> 
           if string_of_stack_value n = name then v  
-          else fetch_from_environment name rest
+          else fetch_from_environment_list name rest
 
-let replace_in_environment (name : stack_value) (value : stack_value) (env : enviroment): enviroment =
-  let env_without_name = remove_from_environment name env in
-  add_to_environment name value env_without_name
+
+let rec fetch_from_env_stack (name : string) (env : env_stack): stack_value =
+  match env with
+  | [] -> Error (* Searched all environments, not found *)
+  | (current_scope, _) :: outer_scopes ->
+      match fetch_from_environment_list name current_scope with
+      | Error -> fetch_from_env_stack name outer_scopes (* Not in this scope, check outer *)
+      | value -> value (* Found! *)
+
+
+let rec check_environment_list (name : string) (env_list : environment): bool =
+  match env_list with
+    | [] -> false
+    | (n, v) :: rest -> if string_of_stack_value n = name then true else check_environment_list name rest
+
+
+let add_to_environment_list (name : stack_value) (value : stack_value) (env_list : environment): environment =
+  (name, value) :: env_list 
+
+
+let remove_from_environment_list (name : stack_value) (env_list : environment): environment =
+  let key = string_of_stack_value name in
+  List.filter(fun(n,_) -> string_of_stack_value n <> key) env_list
+
+
+let replace_in_environment_list (name : stack_value) (value : stack_value) (env_list : environment): environment =
+  let env_without_name = remove_from_environment_list name env_list in
+  add_to_environment_list name value env_without_name
+
 
 let rec resolve_names stk env = 
   List.map(function 
     | Name n ->
-        let v = fetch_from_environment n env in
-        if v = Error then Name n else v
+        let v = fetch_from_env_stack n env in
+        if v = Error then Name n else v (* If not bound, keep it as a Name *)
     | other -> other 
   ) stk
 
-let boolean_logic (op : boolean_op) (stk : stack) (env : enviroment): stack*enviroment =
+let boolean_logic (op : boolean_op) (stk : stack) (env : env_stack): stack*env_stack =
   match op with
     | And -> (
       match stk with
@@ -282,92 +304,99 @@ let boolean_logic (op : boolean_op) (stk : stack) (env : enviroment): stack*envi
         | _ -> pushError stk env 
     )
 
-let cat (stk : stack) (env : enviroment): stack * enviroment=
+let cat (stk : stack) (env : env_stack): stack * env_stack=
   match stk with
     | Str a :: Str b :: rest -> pushStr (b ^ a) rest env 
     | _ -> pushError stk env 
 
-let equal_ (stk : stack) (env : enviroment): stack * enviroment= 
+let equal_ (stk : stack) (env : env_stack): stack * env_stack= 
   match stk with
     | Int a :: Int b :: rest -> pushBool (a = b) rest env 
     | _ -> pushError stk env 
 
-let lessThan_ (stk: stack) (env : enviroment): stack * enviroment = 
+let lessThan_ (stk: stack) (env : env_stack): stack * env_stack = 
   match stk with
     | Int a :: Int b :: rest -> pushBool (b < a) rest env 
     | _ -> pushError stk env
 
-let assign (stk : stack) (env : enviroment) : stack * enviroment= 
-  match stk with 
-    | Int i :: Name n :: rest -> 
-      let name_sv = Name n in
-      let env_new =
-        if check_environment n env then
-        replace_in_environment name_sv (Int i) env
-        else
-        add_to_environment name_sv (Int i) env
-      in
-      (Unit::rest, env_new)
-    | Bool b :: Name n :: rest -> 
-      let name_sv = Name n in
-      let env_new =
-        if check_environment n env then
-        replace_in_environment name_sv (Bool b) env
-        else
-        add_to_environment name_sv (Bool b) env
-      in
-      (Unit::rest, env_new)
-    | Str s :: Name n :: rest -> 
-      let name_sv = Name n in
-      let env_new =
-        if check_environment n env then
-        replace_in_environment name_sv (Str s) env
-        else
-        add_to_environment name_sv (Str s) env
-      in 
-      (Unit::rest, env_new)
-    | Unit  :: Name n :: rest -> 
-      let name_vs = Name n in
-      let env_new =
-        if check_environment n env then
-        replace_in_environment name_vs (Unit) env
-        else
-        add_to_environment name_vs (Unit) env
-      in 
-      (Unit::rest, env_new)
-    | Name a :: Name n :: rest ->
-      let name_sv = Name n in
-      let value = fetch_from_environment a env in
-      if value = Error then
-        pushError stk env
-      else
-        let env_new =
-          if check_environment n env then
-          replace_in_environment name_sv value env
-          else
-          add_to_environment name_sv value env
-        in 
-        (Unit::rest, env_new)
-    | _ :: rest -> pushError rest env 
-    | [] -> pushError stk env
+let assign (stk : stack) (env : env_stack) : stack * env_stack = 
+  match env with 
+  | [] -> (pushError stk []) (* Should not happen if we initialize with a global env *)
+  | (current_env, old_stack) :: outer_envs -> (* Get the top environment *)
+      (match stk with 
+        | Int i :: Name n :: rest -> 
+          let name_sv = Name n in
+          let new_current_env =
+            if check_environment_list n current_env then
+              replace_in_environment_list name_sv (Int i) current_env
+            else
+              add_to_environment_list name_sv (Int i) current_env
+          in
+          (Unit::rest, (new_current_env, old_stack) :: outer_envs) (* Push updated top env back *)
+        | Bool b :: Name n :: rest -> 
+          let name_sv = Name n in
+          let new_current_env =
+            if check_environment_list n current_env then
+              replace_in_environment_list name_sv (Bool b) current_env
+            else
+              add_to_environment_list name_sv (Bool b) current_env
+          in
+          (Unit::rest, (new_current_env, old_stack) :: outer_envs)
+        | Str s :: Name n :: rest -> 
+          let name_sv = Name n in
+          let new_current_env =
+            if check_environment_list n current_env then
+              replace_in_environment_list name_sv (Str s) current_env
+            else
+              add_to_environment_list name_sv (Str s) current_env
+           in 
+          (Unit::rest, (new_current_env, old_stack) :: outer_envs)
+        | Unit  :: Name n :: rest -> 
+          let name_vs = Name n in
+          let new_current_env =
+            if check_environment_list n current_env then
+              replace_in_environment_list name_vs (Unit) current_env
+            else
+              add_to_environment_list name_vs (Unit) current_env
+           in 
+          (Unit::rest, (new_current_env, old_stack) :: outer_envs)
+        | Name a :: Name n :: rest ->
+          let name_sv = Name n in
+          let value = fetch_from_env_stack a env in
+          if value = Error then
+            (pushError stk env) (* Error: binding to unbound name  *)
+           else
+            let new_current_env =
+              if check_environment_list n current_env then
+                replace_in_environment_list name_sv value current_env
+           else
+                add_to_environment_list name_sv value current_env
+            in 
+           (Unit::rest, (new_current_env, old_stack) :: outer_envs)
+        
+        | _ -> (pushError stk env) (* Pushes error, returns original state *)
+      )
 
-let if_ (stk: stack) (env : enviroment): stack*enviroment = 
+let if_ (stk: stack) (env : env_stack): stack*env_stack = 
   match stk with 
     | trueVal :: falseVal :: Bool condition :: rest ->
       if condition then
         (trueVal :: rest, env) 
       else
         (falseVal :: rest, env) 
-    | _ -> pushError stk env 
+    | _ -> (pushError stk env)
 
-let let_ (stk: stack) (env : enviroment) : stack * enviroment =
-  stk,env (*STUB*)
+let let_ (stk: stack) (env: env_stack) : stack * env_stack =
+  (stk, ([], stk) :: env)
 
-  
-let end_ (stk: stack) (env : enviroment): stack * enviroment=
-  stk,env (*STUB*)
-
-
+let end_ (stk: stack) (env: env_stack) : stack * env_stack =
+  match env with
+  | [] -> (pushError stk []) (* 'end' without matching 'let' *)
+  | (current_env, stack_before_let) :: outer_env ->
+      (match stk with
+        | [] -> (Error :: stack_before_let, outer_env) 
+        | top_val :: _ -> (top_val :: stack_before_let, outer_env)
+      )
 
 (*-----------------------------------------------------*) 
 (*|               Main Interpreter Code               |*) 
@@ -378,13 +407,12 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
   let lines = read_lines input in
   let oc = open_out output in  
 
-  (* exec_cmd no longer calls execute; it only applies the operation after optionally resolving names. *)
-  let exec_cmd ?(resolve=true) f (stk : stack) (env : enviroment) : (stack * enviroment) =
+  let exec_cmd ?(resolve=true) f (stk : stack) (env : env_stack) : (stack * env_stack) =
     let adjusted_stk = if resolve then resolve_names stk env else stk in
     f adjusted_stk env
   in
 
-  let rec execute (commands : string list) (stk : stack) (env : enviroment): stack =
+  let rec execute (commands : string list) (stk : stack) (env : env_stack): stack =
     match commands with
     | [] -> stk (*If there are no commands left return the stack*)
     | cmd :: rest -> (*If there is a command left, turn it to a string then match it with the function*)
@@ -394,7 +422,8 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
       if tokens = ["quit"] then stk
       else
         let (new_stk, new_env) =
-          match tokens with
+      
+    match tokens with
           | ["push"; arg] -> exec_cmd (push arg) stk env
           | ["pop"] -> exec_cmd pop stk env
           | ["add"] -> exec_cmd (arithmatic_helper Add) stk env
@@ -414,18 +443,15 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
           | ["lessThan"] -> exec_cmd lessThan_ stk env 
           | ["assign"] -> exec_cmd ~resolve:false assign stk env 
           | ["if"] -> exec_cmd if_ stk env 
-          | ["let"] -> exec_cmd let_ stk env 
-          | ["end"] -> exec_cmd end_ stk env 
+          | ["let"] -> exec_cmd ~resolve:false let_ stk env 
+          | ["end"] -> exec_cmd ~resolve:false end_ stk env 
           | _ -> exec_cmd pushError stk env  (*If command is not recognized; pushError function is called*)
         in
         execute rest new_stk new_env (*Continue executing the rest of the commands*)
   in
 
-  let final_stack = execute lines [] [] in (*Start executing the commands with an empty stack*)
+  let final_stack = execute lines [] [ ([], []) ] in 
 
-  (* Write final stack using the same open channel so we don't reopen/truncate the file prematurely.
-     This preserves any println output already emitted to [oc] during execution and avoids multiple
-     channels writing to the same file concurrently (which could cause corruption). *)
   List.iter (fun line -> output_string oc (string_of_stack_value line ^ "\n")) final_stack;
   close_out oc (*close output channel*)
 
@@ -440,6 +466,9 @@ let () =
     List.iter (fun file ->
       let input_path = dir ^ "/In/" ^ file in
       let output_path = dir ^ "/Out/" ^ String.sub file 0 (String.length file - 4) ^ "_output.txt" in
-      interpreter (input_path, output_path)
+      if Sys.file_exists input_path then
+        interpreter (input_path, output_path)
+       else
+        Printf.printf "Warning: Skipping missing file %s\n" input_path
     ) filenames
   ) directories;
