@@ -257,6 +257,14 @@ let replace_in_environment (name : stack_value) (value : stack_value) (env : env
   let env_without_name = remove_from_environment name env in
   add_to_environment name value env_without_name
 
+let rec resolve_names stk env = 
+  List.map(function 
+    | Name n ->
+        let v = fetch_from_environment n env in
+        if v = Error then Name n else v
+    | other -> other 
+  ) stk
+
 let boolean_logic (op : boolean_op) (stk : stack) (env : enviroment): stack*enviroment =
   match op with
     | And -> (
@@ -370,8 +378,9 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
   let lines = read_lines input in
   let oc = open_out output in  
   
-  let rec exec_cmd f rest (stk : stack) (env : enviroment) =
-    let (new_stk, new_env) = f stk env in
+  let rec exec_cmd ?(resolve=true) f rest (stk : stack) (env : enviroment) =
+    let adjusted_stk = if resolve then resolve_names stk env else stk in
+    let (new_stk, new_env) = f adjusted_stk env in
     execute rest new_stk new_env
   and execute (commands : string list) (stk : stack) (env : enviroment): stack = (*Aaron Massey and Brayden Stille*)
     match commands with
@@ -399,7 +408,7 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
         | ["not"] -> exec_cmd (boolean_logic Not) rest stk env
         | ["equal"] -> exec_cmd equal_ rest stk env 
         | ["lessThan"] -> exec_cmd lessThan_ rest stk env 
-        | ["assign"] -> exec_cmd assign rest stk env 
+        | ["assign"] -> exec_cmd ~resolve:false assign rest stk env 
         | ["if"] -> exec_cmd if_ rest stk env 
         | ["let"] -> exec_cmd let_ rest stk env 
         | ["end"] -> exec_cmd end_ rest stk env 
