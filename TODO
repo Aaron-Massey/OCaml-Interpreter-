@@ -33,24 +33,9 @@ match stk with
 
 
   IMPLEMENT POP FIRST SO THAT YOU CAN HANDLE NAMES IN ALL OTHER FUNCTIONS 
-  CREATE checkDict (returns boolean), addDict(returns unit), readDict(returns value)
 
 
 
+let makes a copy of the current environment, meaning all variables declared before the let end block can still be used
 
-  CHANGE UNIT TO STORE NAME SO THAT IT CAN BE USED TO REPRESENT VARIABLES
-
-
-
-
-Create Int_arith function with signature "stack -> environment -> operation -> stack*environment "
-
-type Operation =
-  | Add
-  | Sub
-  | Mult
-  | Div
-  | Rem
-  | Sign 
-
-
+end returns the top element of the stack

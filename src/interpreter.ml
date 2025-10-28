@@ -1,4 +1,3 @@
-
 (*-----------------------------------------------------*) 
 (*|Interpreter Project - Aaron Massey & Brayden Stille|*) 
 (*-----------------------------------------------------*) 
@@ -218,12 +217,12 @@ let swap (stk : stack) (env: enviroment): stack * enviroment = (*Aaron Massey*)
     | a :: b :: rest -> ((b :: a :: rest), env)(*Swaps the top two elements of the stack*)
     | _ -> pushError stk env (*If there are not enough elements to swap, push an error onto the stack*)
 
-let tostring (stk : stack) (env: enviroment): stack * enviroment = (*Brayden Stille*)
+let tostring (stk : stack) (env : enviroment): stack * enviroment = (*Brayden Stille*)
   match stk with
     | [] -> pushError stk env(*If the stack is empty, push an error onto the stack*)
     | v :: rest -> pushStr (string_of_stack_value v) rest env (*Calls the pushStr function with the string representation of the top stack value*)
 
-let println (out : out_channel) (stk : stack) (env: enviroment) : stack*enviroment = (*Aaron Massey*)
+let println (out : out_channel) (stk : stack) (env : enviroment) : stack*enviroment = (*Aaron Massey*)
   match stk with
     | [] -> pushError stk env (*If the stack is empty, push an error onto the stack*)
     | v :: rest -> Printf.fprintf out "%s\n" (string_of_stack_value v); (rest, env) (*Calls the Printf.fprintf function to print the top stack value to the output channel*)
@@ -378,52 +377,56 @@ let end_ (stk: stack) (env : enviroment): stack * enviroment=
 let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey and Brayden Stille*)
   let lines = read_lines input in
   let oc = open_out output in  
-  
-  let rec exec_cmd ?(resolve=true) f rest (stk : stack) (env : enviroment) =
+
+  (* exec_cmd no longer calls execute; it only applies the operation after optionally resolving names. *)
+  let exec_cmd ?(resolve=true) f (stk : stack) (env : enviroment) : (stack * enviroment) =
     let adjusted_stk = if resolve then resolve_names stk env else stk in
-    let (new_stk, new_env) = f adjusted_stk env in
-    execute rest new_stk new_env
-  and execute (commands : string list) (stk : stack) (env : enviroment): stack = (*Aaron Massey and Brayden Stille*)
+    f adjusted_stk env
+  in
+
+  let rec execute (commands : string list) (stk : stack) (env : enviroment): stack =
     match commands with
     | [] -> stk (*If there are no commands left return the stack*)
     | cmd :: rest -> (*If there is a command left, turn it to a string then match it with the function*)
       let trimmed_cmd = String.trim cmd in (*Trims the whitespace from the command*)
       let tokens = tokenize_command trimmed_cmd in (*Tokenizes the command into a list of strings*)
-      let new_stk = (*executes the command and returns the new stack*)
-        match tokens with
-        | ["push"; arg] -> exec_cmd (push arg) rest stk env
-        | ["pop"] -> exec_cmd pop rest stk env
-        | ["add"] -> exec_cmd (arithmatic_helper Add) rest stk env
-        | ["sub"] -> exec_cmd (arithmatic_helper Sub) rest stk env
-        | ["mult"] -> exec_cmd (arithmatic_helper Mult) rest stk env
-        | ["div"] -> exec_cmd (arithmatic_helper Div) rest stk env
-        | ["rem"] -> exec_cmd (arithmatic_helper Rem) rest stk env
-        | ["sign"] -> exec_cmd sign rest stk env 
-        | ["swap"] -> exec_cmd swap rest stk env 
-        | ["toString"] -> exec_cmd tostring rest stk env 
-        | ["println"] -> exec_cmd (println oc) rest stk env  
-        | ["quit"] -> (stk) (*If command is quit; return the stack and stop executing*)
-        | ["cat"] -> exec_cmd cat rest stk env 
-        | ["and"] -> exec_cmd (boolean_logic And) rest stk env
-        | ["or"] -> exec_cmd (boolean_logic Or) rest stk env
-        | ["not"] -> exec_cmd (boolean_logic Not) rest stk env
-        | ["equal"] -> exec_cmd equal_ rest stk env 
-        | ["lessThan"] -> exec_cmd lessThan_ rest stk env 
-        | ["assign"] -> exec_cmd ~resolve:false assign rest stk env 
-        | ["if"] -> exec_cmd if_ rest stk env 
-        | ["let"] -> exec_cmd let_ rest stk env 
-        | ["end"] -> exec_cmd end_ rest stk env 
-        | _ -> exec_cmd pushError rest stk env  (*If command is not recognized; pushError function is called*)
-      in
-      if tokens = ["quit"] then (*If command is quit; return the stack and stop executing*)
-        new_stk (*Return the new stack*)
+      (* Handle quit specially *)
+      if tokens = ["quit"] then stk
       else
-        execute rest new_stk env (*Continue executing the rest of the commands*)
-    in
-let final_stack = execute lines [] [] in (*Start executing the commands with an empty stack*)
+        let (new_stk, new_env) =
+          match tokens with
+          | ["push"; arg] -> exec_cmd (push arg) stk env
+          | ["pop"] -> exec_cmd pop stk env
+          | ["add"] -> exec_cmd (arithmatic_helper Add) stk env
+          | ["sub"] -> exec_cmd (arithmatic_helper Sub) stk env
+          | ["mult"] -> exec_cmd (arithmatic_helper Mult) stk env
+          | ["div"] -> exec_cmd (arithmatic_helper Div) stk env
+          | ["rem"] -> exec_cmd (arithmatic_helper Rem) stk env
+          | ["sign"] -> exec_cmd sign stk env 
+          | ["swap"] -> exec_cmd swap stk env 
+          | ["toString"] -> exec_cmd tostring stk env 
+          | ["println"] -> exec_cmd (println oc) stk env  
+          | ["cat"] -> exec_cmd cat stk env 
+          | ["and"] -> exec_cmd (boolean_logic And) stk env
+          | ["or"] -> exec_cmd (boolean_logic Or) stk env
+          | ["not"] -> exec_cmd (boolean_logic Not) stk env
+          | ["equal"] -> exec_cmd equal_ stk env 
+          | ["lessThan"] -> exec_cmd lessThan_ stk env 
+          | ["assign"] -> exec_cmd ~resolve:false assign stk env 
+          | ["if"] -> exec_cmd if_ stk env 
+          | ["let"] -> exec_cmd let_ stk env 
+          | ["end"] -> exec_cmd end_ stk env 
+          | _ -> exec_cmd pushError stk env  (*If command is not recognized; pushError function is called*)
+        in
+        execute rest new_stk new_env (*Continue executing the rest of the commands*)
+  in
 
+  let final_stack = execute lines [] [] in (*Start executing the commands with an empty stack*)
 
-  write_lines output final_stack; (*Write the final stack to the output file*)
+  (* Write final stack using the same open channel so we don't reopen/truncate the file prematurely.
+     This preserves any println output already emitted to [oc] during execution and avoids multiple
+     channels writing to the same file concurrently (which could cause corruption). *)
+  List.iter (fun line -> output_string oc (string_of_stack_value line ^ "\n")) final_stack;
   close_out oc (*close output channel*)
 
 (*-----------------------------------------------------*) 
