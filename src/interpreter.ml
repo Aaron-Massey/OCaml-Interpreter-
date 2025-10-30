@@ -285,7 +285,7 @@ let rec resolve_names stk env =  (*Aaron Massey*)
     | other -> other 
   ) stk
 
-let boolean_logic (op : boolean_op) (stk : stack) (env : env_stack): stack*env_stack =
+let boolean_logic (op : boolean_op) (stk : stack) (env : env_stack): stack*env_stack = (*Brayden Stille*)
   match op with
     | And -> (
       match stk with
@@ -303,22 +303,22 @@ let boolean_logic (op : boolean_op) (stk : stack) (env : env_stack): stack*env_s
         | _ -> pushError stk env 
     )
 
-let cat (stk : stack) (env : env_stack): stack * env_stack=
+let cat (stk : stack) (env : env_stack): stack * env_stack= (*Brayden Stille*)
   match stk with
     | Str a :: Str b :: rest -> pushStr (b ^ a) rest env 
     | _ -> pushError stk env 
 
-let equal_ (stk : stack) (env : env_stack): stack * env_stack= 
+let equal_ (stk : stack) (env : env_stack): stack * env_stack= (*Brayden Stille*)
   match stk with
     | Int a :: Int b :: rest -> pushBool (a = b) rest env 
     | _ -> pushError stk env 
 
-let lessThan_ (stk: stack) (env : env_stack): stack * env_stack = 
+let lessThan_ (stk: stack) (env : env_stack): stack * env_stack = (*Brayden Stille*)
   match stk with
     | Int a :: Int b :: rest -> pushBool (b < a) rest env 
     | _ -> pushError stk env
 
-let assign (stk : stack) (env : env_stack) : stack * env_stack = 
+let assign (stk : stack) (env : env_stack) : stack * env_stack = (*Brayden Stille*)
   match env with 
   | [] -> (pushError stk []) (* Should not happen if we initialize with a global env *)
   | (current_env, old_stack) :: outer_envs -> (* Get the top environment *)
@@ -376,7 +376,7 @@ let assign (stk : stack) (env : env_stack) : stack * env_stack =
         | _ -> (pushError stk env) (* Pushes error, returns original state *)
       )
 
-let if_ (stk: stack) (env : env_stack): stack*env_stack = 
+let if_ (stk: stack) (env : env_stack): stack*env_stack = (*Brayden Stille*)
   match stk with 
     | trueVal :: falseVal :: Bool condition :: rest ->
       if condition then
@@ -385,10 +385,10 @@ let if_ (stk: stack) (env : env_stack): stack*env_stack =
         (falseVal :: rest, env) 
     | _ -> (pushError stk env)
 
-let let_ (stk: stack) (env: env_stack) : stack * env_stack =
+let let_ (stk: stack) (env: env_stack) : stack * env_stack = (*Brayden Stille*)
   (stk, ([], stk) :: env)
 
-let end_ (stk: stack) (env: env_stack) : stack * env_stack =
+let end_ (stk: stack) (env: env_stack) : stack * env_stack = (*Brayden Stille*)
   match env with
   | [] -> (pushError stk []) (* 'end' without matching 'let' *)
   | (current_env, stack_before_let) :: outer_env ->
