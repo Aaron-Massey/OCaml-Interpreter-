@@ -286,37 +286,37 @@ let rec resolve_names stk env =  (*Aaron Massey*)
   ) stk
 
 let boolean_logic (op : boolean_op) (stk : stack) (env : env_stack): stack*env_stack = (*Brayden Stille*)
-  match op with
-    | And -> (
+  match op with (*Matches boolean operations*)
+    | And -> ( (*If op is And*)
       match stk with
-        | Bool a :: Bool b :: rest -> pushBool (b && a) rest env 
-        | _ -> pushError stk env
+        | Bool a :: Bool b :: rest -> pushBool (b && a) rest env (*if both are true return true else false*)
+        | _ -> pushError stk env (*if not enough elements push error to the stack*)
     )
-    | Or -> (
+    | Or -> ( (*If op is Or*)
       match stk with
-        | Bool a :: Bool b :: rest -> pushBool (b || a) rest env 
-        | _ -> pushError stk env 
+        | Bool a :: Bool b :: rest -> pushBool (b || a) rest env (*if either are true return true if neither are true return false*)
+        | _ -> pushError stk env (*if not enough elements push error to the stack*)
     )
-    | Not -> (
+    | Not -> ( (*If op is Not*)
       match stk with
-        | Bool a :: rest -> pushBool (not a) rest env 
-        | _ -> pushError stk env 
+        | Bool a :: rest -> pushBool (not a) rest env  (*if true return false, if false return true*)
+        | _ -> pushError stk env (*if wrong element push error to the stack*)
     )
 
 let cat (stk : stack) (env : env_stack): stack * env_stack= (*Brayden Stille*)
   match stk with
-    | Str a :: Str b :: rest -> pushStr (b ^ a) rest env 
-    | _ -> pushError stk env 
+    | Str a :: Str b :: rest -> pushStr (b ^ a) rest env (*Concatenates two strings together*)
+    | _ -> pushError stk env (*if not enough elements push error to the stack*)
 
 let equal_ (stk : stack) (env : env_stack): stack * env_stack= (*Brayden Stille*)
   match stk with
-    | Int a :: Int b :: rest -> pushBool (a = b) rest env 
-    | _ -> pushError stk env 
+    | Int a :: Int b :: rest -> pushBool (a = b) rest env (*if int a and b are the same return true*)
+    | _ -> pushError stk env (*if not enough elements push error to the stack*)
 
 let lessThan_ (stk: stack) (env : env_stack): stack * env_stack = (*Brayden Stille*)
   match stk with
-    | Int a :: Int b :: rest -> pushBool (b < a) rest env 
-    | _ -> pushError stk env
+    | Int a :: Int b :: rest -> pushBool (b < a) rest env (*if int b is less than int a return true*)
+    | _ -> pushError stk env (*if not enough elements push error to the stack*)
 
 let assign (stk : stack) (env : env_stack) : stack * env_stack = (*Brayden Stille*)
   match env with 
@@ -380,21 +380,21 @@ let if_ (stk: stack) (env : env_stack): stack*env_stack = (*Brayden Stille*)
   match stk with 
     | trueVal :: falseVal :: Bool condition :: rest ->
       if condition then
-        (trueVal :: rest, env) 
+        (trueVal :: rest, env) (*If condition is true, push trueVal to the stack*)
       else
-        (falseVal :: rest, env) 
+        (falseVal :: rest, env) (*If condition is false, push falseVal to the stack*)
     | _ -> (pushError stk env)
 
 let let_ (stk: stack) (env: env_stack) : stack * env_stack = (*Brayden Stille*)
-  (stk, ([], stk) :: env)
+  (stk, ([], stk) :: env) (*Pushes a new environment onto the stack*)
 
 let end_ (stk: stack) (env: env_stack) : stack * env_stack = (*Brayden Stille*)
   match env with
   | [] -> (pushError stk []) (* 'end' without matching 'let' *)
   | (current_env, stack_before_let) :: outer_env ->
       (match stk with
-        | [] -> (Error :: stack_before_let, outer_env) 
-        | top_val :: _ -> (top_val :: stack_before_let, outer_env)
+        | [] -> (Error :: stack_before_let, outer_env) (*Pushes error, returns original state*)
+        | top_val :: _ -> (top_val :: stack_before_let, outer_env) (*Pushes the top value of the current stack to the main stack*)
       )
 
 (*-----------------------------------------------------*) 
@@ -455,7 +455,7 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
   close_out oc (*close output channel*)
 
 (*-----------------------------------------------------*) 
-(*|        Manually change filenames for now          |*)
+(*|        Used directories to test program           |*)
 (*-----------------------------------------------------*)
 let () =
   let directories = ["Part_1_Tests" ; "Part_2_Tests"] in
