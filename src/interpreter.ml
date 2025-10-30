@@ -169,7 +169,7 @@ let pop (stk: stack) (env : env_stack): stack * env_stack=  (*Aaron Massey*)
     | _ :: rest -> (rest, env) 
 
 
-let int_arithmatic (op : operation) (stk: stack) (env : env_stack) : stack * env_stack = 
+let int_arithmetic (op : operation) (stk: stack) (env : env_stack) : stack * env_stack = 
   match op with 
     | Add -> ( 
       match stk with
@@ -210,9 +210,9 @@ let int_arithmatic (op : operation) (stk: stack) (env : env_stack) : stack * env
         | _ -> pushError stk env (*If there are no Ints push an error to the stack*)
     ) 
 
-let arithmatic_helper (op : operation) (stk: stack) (env : env_stack) : stack * env_stack = 
+let arithmetic_helper (op : operation) (stk: stack) (env : env_stack) : stack * env_stack = 
   match stk with 
-    | Int a :: Int b :: rest -> int_arithmatic op stk env
+    | Int a :: Int b :: rest -> int_arithmetic op stk env
     | _ -> pushError stk env
 
 let sign (stk : stack) (env : env_stack): stack * env_stack = (*Aaron Massey*)
@@ -426,27 +426,27 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
       
     match tokens with
           | ["push"; arg] -> exec_cmd (push arg) stk env
-          | ["pop"] -> exec_cmd pop stk env
-          | ["add"] -> exec_cmd (arithmatic_helper Add) stk env
-          | ["sub"] -> exec_cmd (arithmatic_helper Sub) stk env
-          | ["mult"] -> exec_cmd (arithmatic_helper Mult) stk env
-          | ["div"] -> exec_cmd (arithmatic_helper Div) stk env
-          | ["rem"] -> exec_cmd (arithmatic_helper Rem) stk env
-          | ["sign"] -> exec_cmd sign stk env 
-          | ["swap"] -> exec_cmd swap stk env 
-          | ["toString"] -> exec_cmd tostring stk env 
+          | ["pop"] -> exec_cmd (pop) stk env
+          | ["add"] -> exec_cmd (arithmetic_helper Add) stk env
+          | ["sub"] -> exec_cmd (arithmetic_helper Sub) stk env
+          | ["mult"] -> exec_cmd (arithmetic_helper Mult) stk env
+          | ["div"] -> exec_cmd (arithmetic_helper Div) stk env
+          | ["rem"] -> exec_cmd (arithmetic_helper Rem) stk env
+          | ["sign"] -> exec_cmd (sign) stk env 
+          | ["swap"] -> exec_cmd (swap) stk env 
+          | ["toString"] -> exec_cmd (tostring) stk env 
           | ["println"] -> exec_cmd (println oc) stk env  
-          | ["cat"] -> exec_cmd cat stk env 
+          | ["cat"] -> exec_cmd (cat) stk env 
           | ["and"] -> exec_cmd (boolean_logic And) stk env
           | ["or"] -> exec_cmd (boolean_logic Or) stk env
           | ["not"] -> exec_cmd (boolean_logic Not) stk env
-          | ["equal"] -> exec_cmd equal_ stk env 
-          | ["lessThan"] -> exec_cmd lessThan_ stk env 
-          | ["assign"] -> exec_cmd ~resolve:false assign stk env 
-          | ["if"] -> exec_cmd if_ stk env 
-          | ["let"] -> exec_cmd ~resolve:false let_ stk env 
-          | ["end"] -> exec_cmd ~resolve:false end_ stk env 
-          | _ -> exec_cmd pushError stk env  (*If command is not recognized; pushError function is called*)
+          | ["equal"] -> exec_cmd (equal_) stk env 
+          | ["lessThan"] -> exec_cmd (lessThan_) stk env 
+          | ["assign"] -> exec_cmd ~resolve:false (assign) stk env 
+          | ["if"] -> exec_cmd (if_) stk env 
+          | ["let"] -> exec_cmd ~resolve:false (let_) stk env 
+          | ["end"] -> exec_cmd ~resolve:false (end_) stk env 
+          | _ -> exec_cmd (pushError) stk env  (*If command is not recognized; pushError function is called*)
         in
         execute rest new_stk new_env (*Continue executing the rest of the commands*)
   in
