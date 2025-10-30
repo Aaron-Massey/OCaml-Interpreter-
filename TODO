@@ -14,7 +14,7 @@ Potentially store assigned elements in a dictionary?
 
 should create a new element in the dictionary using a as the key which stores the value 3 
 
-something along the lines of 
+
 match stk with
   | Name n :: val :: rest -> 
     (match val with 
@@ -33,10 +33,9 @@ match stk with
 
 
   IMPLEMENT POP FIRST SO THAT YOU CAN HANDLE NAMES IN ALL OTHER FUNCTIONS 
-  CREATE checkDict (returns boolean), addDict(returns unit), readDict(returns value)
 
 
 
+let makes a copy of the current environment, meaning all variables declared before the let end block can still be used
 
-  CHANGE UNIT TO STORE NAME SO THAT IT CAN BE USED TO REPRESENT VARIABLES
-  WHEN UNIT IS POPPED FROM STACK, MAKE IT RETURN VALUE STORED BY NAME 
+end returns the top element of the stack
