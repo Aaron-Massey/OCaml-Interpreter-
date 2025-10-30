@@ -195,8 +195,7 @@ let int_arithmetic (op : operation) (stk: stack) (env : env_stack) : stack * env
           if a = 0 then (*If the denominator is 0, push the Ints back onto the stack with an error*)
             pushError (Int a :: Int b :: rest) env
           else
-       
-     pushInt (b / a) rest env(*If the Ints are valid, divide them*)
+            pushInt (b / a) rest env(*If the Ints are valid, divide them*)
         | _ -> pushError stk env  (*If there are no Ints, push an error to the stack*)
     ) 
     | Rem ->  (
@@ -205,8 +204,7 @@ let int_arithmetic (op : operation) (stk: stack) (env : env_stack) : stack * env
           if a = 0 then
             pushError (Int a :: Int b :: rest) env (*If the denominator is 0, return the Ints to the stack and push an error*)
           else
-      
-      pushInt (b mod a) rest env (* Otherwise push the modulo (remainder) of the Ints*)
+            pushInt (b mod a) rest env (* Otherwise push the modulo (remainder) of the Ints*)
         | _ -> pushError stk env (*If there are no Ints push an error to the stack*)
     ) 
 
@@ -366,14 +364,14 @@ let assign (stk : stack) (env : env_stack) : stack * env_stack =
           let value = fetch_from_env_stack a env in
           if value = Error then
             (pushError stk env) (* Error: binding to unbound name  *)
-           else
+          else
             let new_current_env =
               if check_environment_list n current_env then
                 replace_in_environment_list name_sv value current_env
-           else
+              else
                 add_to_environment_list name_sv value current_env
             in 
-           (Unit::rest, (new_current_env, old_stack) :: outer_envs)
+          (Unit::rest, (new_current_env, old_stack) :: outer_envs)
         
         | _ -> (pushError stk env) (* Pushes error, returns original state *)
       )
