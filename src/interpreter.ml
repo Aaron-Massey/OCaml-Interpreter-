@@ -154,10 +154,10 @@ let push (arg : string) (stk : stack) (env : env_stack): stack * env_stack = (*B
       pushStr s stk env (*Calls the pushStr function with s as the string and the stack as stk*)
   else
   match arg with (*matches the push function with the argument*)
-    | ":true:" -> pushBool true stk env(*Calls the pushBool function with true and the stack as stk*)
-    | ":false:" -> pushBool false stk env(*Calls the pushBool function with false and the stack as stk*)
-    | ":error:" -> pushError stk env(*Calls the pushError function with the stack as stk*)
-    | ":unit:" -> pushUnit stk env(*Calls the pushUnit function with the stack as stk*)
+    | ":true:" -> pushBool true stk env (*Calls the pushBool function with true and the stack as stk*)
+    | ":false:" -> pushBool false stk env (*Calls the pushBool function with false and the stack as stk*)
+    | ":error:" -> pushError stk env (*Calls the pushError function with the stack as stk*)
+    | ":unit:" -> pushUnit stk env (*Calls the pushUnit function with the stack as stk*)
     | arg when is_valid_name arg -> pushName arg stk env(*Calls the pushName function with arg as the name and the stack as stk*)
     | arg when is_valid_int arg -> pushInt (int_of_string arg) stk env (*Calls the pushInt function with arg converted to an int and the stack as stk*)
     | _ -> pushError stk env (*If the argument is not valid, calls the pushError function with the stack as stk*)
@@ -220,12 +220,12 @@ let sign (stk : stack) (env : env_stack): stack * env_stack = (*Aaron Massey*)
 
 let swap (stk : stack) (env: env_stack): stack * env_stack = (*Aaron Massey*)
   match stk with
-    | a :: b :: rest -> ((b :: a :: rest), env)(*Swaps the top two elements of the stack*)
+    | a :: b :: rest -> ((b :: a :: rest), env) (*Swaps the top two elements of the stack*)
     | _ -> pushError stk env (*If there are not enough elements to swap, push an error onto the stack*)
 
 let tostring (stk : stack) (env : env_stack): stack * env_stack = (*Brayden Stille*)
   match stk with
-    | [] -> pushError stk env(*If the stack is empty, push an error onto the stack*)
+    | [] -> pushError stk env (*If the stack is empty, push an error onto the stack*)
     | v :: rest -> pushStr (string_of_stack_value v) rest env (*Calls the pushStr function with the string representation of the top stack value*)
 
 let println (out : out_channel) (stk : stack) (env : env_stack) : stack*env_stack = (*Aaron Massey*)
@@ -348,7 +348,7 @@ let assign (stk : stack) (env : env_stack) : stack * env_stack =
               replace_in_environment_list name_sv (Str s) current_env
             else
               add_to_environment_list name_sv (Str s) current_env
-           in 
+          in 
           (Unit::rest, (new_current_env, old_stack) :: outer_envs)
         | Unit  :: Name n :: rest -> 
           let name_vs = Name n in
@@ -357,7 +357,7 @@ let assign (stk : stack) (env : env_stack) : stack * env_stack =
               replace_in_environment_list name_vs (Unit) current_env
             else
               add_to_environment_list name_vs (Unit) current_env
-           in 
+          in 
           (Unit::rest, (new_current_env, old_stack) :: outer_envs)
         | Name a :: Name n :: rest ->
           let name_sv = Name n in
@@ -370,7 +370,7 @@ let assign (stk : stack) (env : env_stack) : stack * env_stack =
                 replace_in_environment_list name_sv value current_env
               else
                 add_to_environment_list name_sv value current_env
-            in 
+          in 
           (Unit::rest, (new_current_env, old_stack) :: outer_envs)
         
         | _ -> (pushError stk env) (* Pushes error, returns original state *)
