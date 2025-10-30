@@ -169,7 +169,7 @@ let pop (stk: stack) (env : env_stack): stack * env_stack=  (*Aaron Massey*)
     | _ :: rest -> (rest, env) 
 
 
-let int_arithmetic (op : operation) (stk: stack) (env : env_stack) : stack * env_stack = 
+let int_arithmetic (op : operation) (stk: stack) (env : env_stack) : stack * env_stack =  (*Aaron Massey*)
   match op with 
     | Add -> ( 
       match stk with
@@ -208,7 +208,7 @@ let int_arithmetic (op : operation) (stk: stack) (env : env_stack) : stack * env
         | _ -> pushError stk env (*If there are no Ints push an error to the stack*)
     ) 
 
-let arithmetic_helper (op : operation) (stk: stack) (env : env_stack) : stack * env_stack = 
+let arithmetic_helper (op : operation) (stk: stack) (env : env_stack) : stack * env_stack =  (*Aaron Massey*)
   match stk with 
     | Int a :: Int b :: rest -> int_arithmetic op stk env
     | _ -> pushError stk env
@@ -240,7 +240,7 @@ let println (out : out_channel) (stk : stack) (env : env_stack) : stack*env_stac
 (*-----------------------------------------------------*) 
 
 
-let rec fetch_from_environment_list (name : string) (env_list : environment): stack_value =
+let rec fetch_from_environment_list (name : string) (env_list : environment): stack_value = (*Aaron Massey*)
   match env_list with
     | [] -> Error 
     | (n, v) :: rest -> 
@@ -248,7 +248,7 @@ let rec fetch_from_environment_list (name : string) (env_list : environment): st
           else fetch_from_environment_list name rest
 
 
-let rec fetch_from_env_stack (name : string) (env : env_stack): stack_value =
+let rec fetch_from_env_stack (name : string) (env : env_stack): stack_value = (*Aaron Massey*)
   match env with
   | [] -> Error (* Searched all environments, not found *)
   | (current_scope, _) :: outer_scopes ->
@@ -257,27 +257,27 @@ let rec fetch_from_env_stack (name : string) (env : env_stack): stack_value =
       | value -> value (* Found! *)
 
 
-let rec check_environment_list (name : string) (env_list : environment): bool =
+let rec check_environment_list (name : string) (env_list : environment): bool = (*Aaron Massey*)
   match env_list with
     | [] -> false
     | (n, v) :: rest -> if string_of_stack_value n = name then true else check_environment_list name rest
 
 
-let add_to_environment_list (name : stack_value) (value : stack_value) (env_list : environment): environment =
+let add_to_environment_list (name : stack_value) (value : stack_value) (env_list : environment): environment = (*Aaron Massey*)
   (name, value) :: env_list 
 
 
-let remove_from_environment_list (name : stack_value) (env_list : environment): environment =
+let remove_from_environment_list (name : stack_value) (env_list : environment): environment = (*Aaron Massey*)
   let key = string_of_stack_value name in
   List.filter(fun(n,_) -> string_of_stack_value n <> key) env_list
 
 
-let replace_in_environment_list (name : stack_value) (value : stack_value) (env_list : environment): environment =
+let replace_in_environment_list (name : stack_value) (value : stack_value) (env_list : environment): environment = (*Aaron Massey*)
   let env_without_name = remove_from_environment_list name env_list in
   add_to_environment_list name value env_without_name
 
 
-let rec resolve_names stk env = 
+let rec resolve_names stk env =  (*Aaron Massey*)
   List.map(function 
     | Name n ->
         let v = fetch_from_env_stack n env in
