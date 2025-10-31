@@ -16,14 +16,14 @@ type stack_value = (*Aaron Massey*)
   | Error                                                   
   | Unit
 
-type operation =
+type operation = (*Int ops*)
   | Add
   | Sub 
   | Mult 
   | Div   
   | Rem
 
-type boolean_op =
+type boolean_op = (*Boolean ops*)
   | And 
   | Or 
   | Not 
@@ -175,19 +175,19 @@ let int_arithmetic (op : operation) (stk: stack) (env : env_stack) : stack * env
       match stk with
         | Int a :: Int b :: rest -> (*If there are two ints, add them*)
           pushInt (b + a) rest env 
-        | _ -> pushError stk env  (*Otherwise return the original stack with an error *)
+        | _ -> pushError stk env  (*Otherwise return the original stack with an error*)
           )
     | Sub -> (
       match stk with
       | Int a :: Int b :: rest ->
-        pushInt (b - a) rest env 
-      | _ -> pushError stk env 
+        pushInt (b - a) rest env (*If there are two Ints, subtract them *)
+      | _ -> pushError stk env (*Otherwise return the original stack with an error*)
     ) 
     | Mult -> (
       match stk with 
         | Int a :: Int b :: rest ->
-          pushInt (b * a) rest env 
-        | _ -> pushError stk env 
+          pushInt (b * a) rest env  (*If there are two Ints, multiply them *)
+        | _ -> pushError stk env (*Otherwise return the original stack with an error*)
     ) 
     | Div -> (
       match stk with
@@ -210,8 +210,8 @@ let int_arithmetic (op : operation) (stk: stack) (env : env_stack) : stack * env
 
 let arithmetic_helper (op : operation) (stk: stack) (env : env_stack) : stack * env_stack =  (*Aaron Massey*)
   match stk with 
-    | Int a :: Int b :: rest -> int_arithmetic op stk env
-    | _ -> pushError stk env
+    | Int a :: Int b :: rest -> int_arithmetic op stk env (*If there are two Ints, call the int_arithmetic function*)
+    | _ -> pushError stk env (*If there are no Ints, push an error to the stack*)
 
 let sign (stk : stack) (env : env_stack): stack * env_stack = (*Aaron Massey*)
   match stk with 
@@ -242,10 +242,10 @@ let println (out : out_channel) (stk : stack) (env : env_stack) : stack*env_stac
 
 let rec fetch_from_environment_list (name : string) (env_list : environment): stack_value = (*Aaron Massey*)
   match env_list with
-    | [] -> Error 
+    | [] -> Error (*If the name is not found push an error*)
     | (n, v) :: rest -> 
-          if string_of_stack_value n = name then v  
-          else fetch_from_environment_list name rest
+          if string_of_stack_value n = name then v (*If the name is found, return the value*)
+          else fetch_from_environment_list name rest (*Otherwise, continue searching the rest of the environment list*)
 
 
 let rec fetch_from_env_stack (name : string) (env : env_stack): stack_value = (*Aaron Massey*)
@@ -259,27 +259,27 @@ let rec fetch_from_env_stack (name : string) (env : env_stack): stack_value = (*
 
 let rec check_environment_list (name : string) (env_list : environment): bool = (*Aaron Massey*)
   match env_list with
-    | [] -> false
-    | (n, v) :: rest -> if string_of_stack_value n = name then true else check_environment_list name rest
-
+    | [] -> false (*If the name is not found, return false*)
+    (*If the name is found, return true; otherwise, continue searching the rest of the environment list*)
+    | (n, v) :: rest -> if string_of_stack_value n = name then true else check_environment_list name rest 
 
 let add_to_environment_list (name : stack_value) (value : stack_value) (env_list : environment): environment = (*Aaron Massey*)
-  (name, value) :: env_list 
+  (name, value) :: env_list (*Adds a name-value pair to the environment list*)
 
 
 let remove_from_environment_list (name : stack_value) (env_list : environment): environment = (*Aaron Massey*)
-  let key = string_of_stack_value name in
-  List.filter(fun(n,_) -> string_of_stack_value n <> key) env_list
+  let key = string_of_stack_value name in (*Converts the name to a string*)
+  List.filter(fun(n,_) -> string_of_stack_value n <> key) env_list (*Removes the name-value pair from the environment list*)
 
 
 let replace_in_environment_list (name : stack_value) (value : stack_value) (env_list : environment): environment = (*Aaron Massey*)
-  let env_without_name = remove_from_environment_list name env_list in
-  add_to_environment_list name value env_without_name
+  let env_without_name = remove_from_environment_list name env_list in (*Removes the name-value pair from the environment list*)
+  add_to_environment_list name value env_without_name (*Adds the new name-value pair to the environment list*)
 
 
 let rec resolve_names stk env =  (*Aaron Massey*)
   List.map(function 
-    | Name n ->
+    | Name n -> (*If the name is found, resolve it; otherwise, keep it as a Name*)
         let v = fetch_from_env_stack n env in
         if v = Error then Name n else v (* If not bound, keep it as a Name *)
     | other -> other 
@@ -327,7 +327,7 @@ let assign (stk : stack) (env : env_stack) : stack * env_stack = (*Brayden Still
           let name_sv = Name n in
           let new_current_env =
             if check_environment_list n current_env then
-              replace_in_environment_list name_sv (Int i) current_env
+              replace_in_environment_list name_sv (Int i) current_env (*Assigns int to var*)
             else
               add_to_environment_list name_sv (Int i) current_env
           in
@@ -336,7 +336,7 @@ let assign (stk : stack) (env : env_stack) : stack * env_stack = (*Brayden Still
           let name_sv = Name n in
           let new_current_env =
             if check_environment_list n current_env then
-              replace_in_environment_list name_sv (Bool b) current_env
+              replace_in_environment_list name_sv (Bool b) current_env (*Assigns bool to var*)
             else
               add_to_environment_list name_sv (Bool b) current_env
           in
@@ -345,7 +345,7 @@ let assign (stk : stack) (env : env_stack) : stack * env_stack = (*Brayden Still
           let name_sv = Name n in
           let new_current_env =
             if check_environment_list n current_env then
-              replace_in_environment_list name_sv (Str s) current_env
+              replace_in_environment_list name_sv (Str s) current_env (*Assigns string to var*)
             else
               add_to_environment_list name_sv (Str s) current_env
           in 
@@ -354,7 +354,7 @@ let assign (stk : stack) (env : env_stack) : stack * env_stack = (*Brayden Still
           let name_vs = Name n in
           let new_current_env =
             if check_environment_list n current_env then
-              replace_in_environment_list name_vs (Unit) current_env
+              replace_in_environment_list name_vs (Unit) current_env (*Assigns unit to var*)
             else
               add_to_environment_list name_vs (Unit) current_env
           in 
@@ -367,7 +367,7 @@ let assign (stk : stack) (env : env_stack) : stack * env_stack = (*Brayden Still
           else
             let new_current_env =
               if check_environment_list n current_env then
-                replace_in_environment_list name_sv value current_env
+                replace_in_environment_list name_sv value current_env (*Assigns value to var*)
               else
                 add_to_environment_list name_sv value current_env
           in 
@@ -423,27 +423,27 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
         let (new_stk, new_env) =
       
     match tokens with
-          | ["push"; arg] -> exec_cmd (push arg) stk env
-          | ["pop"] -> exec_cmd (pop) stk env
-          | ["add"] -> exec_cmd (arithmetic_helper Add) stk env
-          | ["sub"] -> exec_cmd (arithmetic_helper Sub) stk env
-          | ["mult"] -> exec_cmd (arithmetic_helper Mult) stk env
-          | ["div"] -> exec_cmd (arithmetic_helper Div) stk env
-          | ["rem"] -> exec_cmd (arithmetic_helper Rem) stk env
-          | ["sign"] -> exec_cmd (sign) stk env 
-          | ["swap"] -> exec_cmd (swap) stk env 
-          | ["toString"] -> exec_cmd (tostring) stk env 
-          | ["println"] -> exec_cmd (println oc) stk env  
-          | ["cat"] -> exec_cmd (cat) stk env 
-          | ["and"] -> exec_cmd (boolean_logic And) stk env
-          | ["or"] -> exec_cmd (boolean_logic Or) stk env
-          | ["not"] -> exec_cmd (boolean_logic Not) stk env
-          | ["equal"] -> exec_cmd (equal_) stk env 
-          | ["lessThan"] -> exec_cmd (lessThan_) stk env 
-          | ["assign"] -> exec_cmd ~resolve:false (assign) stk env 
-          | ["if"] -> exec_cmd (if_) stk env 
-          | ["let"] -> exec_cmd ~resolve:false (let_) stk env 
-          | ["end"] -> exec_cmd ~resolve:false (end_) stk env 
+          | ["push"; arg] -> exec_cmd (push arg) stk env (*Calls the push function*)
+          | ["pop"] -> exec_cmd (pop) stk env (*Calls the pop function*)
+          | ["add"] -> exec_cmd (arithmetic_helper Add) stk env (*Calls the arithmetic_helper with the Add operation*)
+          | ["sub"] -> exec_cmd (arithmetic_helper Sub) stk env (*Calls the arithmetic_helper with the Sub operation*)
+          | ["mult"] -> exec_cmd (arithmetic_helper Mult) stk env (*Calls the arithmetic_helper with the Mult operation*)
+          | ["div"] -> exec_cmd (arithmetic_helper Div) stk env (*Calls the arithmetic_helper with the Div operation*)
+          | ["rem"] -> exec_cmd (arithmetic_helper Rem) stk env (*Calls the arithmetic_helper with the Rem operation*)
+          | ["sign"] -> exec_cmd (sign) stk env (*Calls the sign function*)
+          | ["swap"] -> exec_cmd (swap) stk env (*Calls the swap function*)
+          | ["toString"] -> exec_cmd (tostring) stk env (*Calls the tostring function*)
+          | ["println"] -> exec_cmd (println oc) stk env  (*Calls the println function*)
+          | ["cat"] -> exec_cmd (cat) stk env (*Calls the cat function*)
+          | ["and"] -> exec_cmd (boolean_logic And) stk env (*Calls the boolean_logic function with And operation*)
+          | ["or"] -> exec_cmd (boolean_logic Or) stk env (*Calls the boolean_logic function with Or operation*)
+          | ["not"] -> exec_cmd (boolean_logic Not) stk env (*Calls the boolean_logic function with Not operation*)
+          | ["equal"] -> exec_cmd (equal_) stk env (*Calls the equal_ function*)
+          | ["lessThan"] -> exec_cmd (lessThan_) stk env (*Calls the lessThan_ function*)
+          | ["assign"] -> exec_cmd ~resolve:false (assign) stk env (*Calls the assign function*)
+          | ["if"] -> exec_cmd (if_) stk env (*Calls the if_ function*)
+          | ["let"] -> exec_cmd ~resolve:false (let_) stk env (*Calls the let_ function*)
+          | ["end"] -> exec_cmd ~resolve:false (end_) stk env (*Calls the end_ function*)
           | _ -> exec_cmd (pushError) stk env  (*If command is not recognized; pushError function is called*)
         in
         execute rest new_stk new_env (*Continue executing the rest of the commands*)
