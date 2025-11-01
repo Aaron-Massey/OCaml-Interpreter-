@@ -457,6 +457,8 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
 (*-----------------------------------------------------*) 
 (*|        Used directories to test program           |*)
 (*-----------------------------------------------------*)
+(*
+
 let () =
   let directories = ["Part_1_Tests" ; "Part_2_Tests"] in
   let filenames = ["input1.txt";"input2.txt";"input3.txt";"input4.txt";"input5.txt";
@@ -471,3 +473,5 @@ let () =
         Printf.printf "Warning: Skipping missing file %s\n" input_path
     ) filenames
   ) directories;
+  
+  *)
