@@ -181,24 +181,30 @@ let pop (stk: stack) (env : env_stack): stack * env_stack=  (*Aaron Massey*)
     | _ :: rest -> (rest, env) 
 
 
-let int_arithmetic (op : operation) (stk: stack) (env : env_stack) : stack * env_stack =  (*Aaron Massey*)
+let arithmetic (op : operation) (stk: stack) (env : env_stack) : stack * env_stack =  (*Aaron Massey*)
   match op with 
     | Add -> ( 
       match stk with
         | Int a :: Int b :: rest -> (*If there are two ints, add them*)
-          pushInt (b + a) rest env 
+          pushInt (b + a) rest env
+        | Float a :: Float b :: rest -> (*If there are two floats, add them*)
+          pushFloat (b +. a) rest env
         | _ -> pushError stk env  (*Otherwise return the original stack with an error*)
           )
     | Sub -> (
       match stk with
       | Int a :: Int b :: rest ->
         pushInt (b - a) rest env (*If there are two Ints, subtract them *)
+      | Float a :: Float b :: rest ->
+        pushFloat (b -. a) rest env (*If there are two Floats, subtract them *)
       | _ -> pushError stk env (*Otherwise return the original stack with an error*)
     ) 
     | Mult -> (
       match stk with 
         | Int a :: Int b :: rest ->
           pushInt (b * a) rest env  (*If there are two Ints, multiply them *)
+        | Float a :: Float b :: rest ->
+          pushFloat (b *. a) rest env  (*If there are two Floats, multiply them *)
         | _ -> pushError stk env (*Otherwise return the original stack with an error*)
     ) 
     | Div -> (
@@ -208,6 +214,11 @@ let int_arithmetic (op : operation) (stk: stack) (env : env_stack) : stack * env
             pushError (Int a :: Int b :: rest) env
           else
             pushInt (b / a) rest env(*If the Ints are valid, divide them*)
+        | Float a :: Float b :: rest -> (*If there are two Floats, divide them *)
+          if a = 0.0 then (*If the denominator is 0, push the Floats back onto the stack with an error*)
+            pushError (Float a :: Float b :: rest) env
+          else
+            pushFloat (b /. a) rest env(*If the Floats are valid, divide them*)
         | _ -> pushError stk env  (*If there are no Ints, push an error to the stack*)
     ) 
     | Rem ->  (
@@ -217,59 +228,25 @@ let int_arithmetic (op : operation) (stk: stack) (env : env_stack) : stack * env
             pushError (Int a :: Int b :: rest) env (*If the denominator is 0, return the Ints to the stack and push an error*)
           else
             pushInt (b mod a) rest env (* Otherwise push the modulo (remainder) of the Ints*)
+        | Float a :: Float b :: rest -> (*If there are two Floats, get the modulo*)
+          if a = 0.0 then
+            pushError (Float a :: Float b :: rest) env (*If the denominator is 0, return the Floats to the stack and push an error*)
+          else
+            pushFloat (mod_float b a) rest env (* Otherwise push the modulo (remainder) of the Floats*)
         | _ -> pushError stk env (*If there are no Ints push an error to the stack*)
-    ) 
-
-  let float_arithmetic (op : operation) (stk: stack) (env : env_stack) : stack * env_stack =  (*Aaron Massey*)
-    match op with 
-      | Add -> ( 
-        match stk with
-          | Float a :: Float b :: rest -> (*If there are two floats, add them*)
-            pushFloat (b +. a) rest env 
-          | _ -> pushError stk env  (*Otherwise return the original stack with an error*)
-            )
-      | Sub -> (
-        match stk with
-        | Float a :: Float b :: rest ->
-          pushFloat (b -. a) rest env (*If there are two floats, subtract them *)
-        | _ -> pushError stk env (*Otherwise return the original stack with an error*)
-      ) 
-      | Mult -> (
-        match stk with 
-          | Float a :: Float b :: rest ->
-            pushFloat (b *. a) rest env  (*If there are two floats, multiply them *)
-          | _ -> pushError stk env (*Otherwise return the original stack with an error*)
-      ) 
-      | Div -> (
-        match stk with
-          | Float a :: Float b :: rest -> (*If there are two floats, divide them *)
-            if a = 0.0 then (*If the denominator is 0, push the floats back onto the stack with an error*)
-              pushError (Float a :: Float b :: rest) env
-            else
-              pushFloat (b /. a) rest env(*If the floats are valid, divide them*)
-          | _ -> pushError stk env  (*If there are no floats, push an error to the stack*)
-      ) 
-      | Rem ->  (
-        match stk with
-          | Float a :: Float b :: rest -> (*If there are two floats, get the modulo*)
-            if a = 0.0 then
-              pushError (Float a :: Float b :: rest) env (*If the denominator is 0, return the floats to the stack and push an error*)
-            else
-              pushFloat (mod_float b a) rest env (* Otherwise push the modulo (remainder) of the floats*)
-          | _ -> pushError stk env (*If there are no floats push an error to the stack*)
-      )
+    )    
 
 let arithmetic_helper (op : operation) (stk: stack) (env : env_stack) : stack * env_stack =  (*Aaron Massey*)
   match stk with 
-    | Int a :: Int b :: rest -> int_arithmetic op stk env (*If there are two Ints, call the int_arithmetic function*)
-    | Float a :: Float b :: rest -> float_arithmetic op stk env 
-    | _ -> pushError stk env (*If there are no Ints, push an error to the stack*)
+    | Int a :: Int b :: rest -> arithmetic op stk env (*If there are two Ints, call the int_arithmetic function*)
+    | Float a :: Float b :: rest -> arithmetic op stk env 
+    | _ -> pushError stk env (*If there are no Ints or Floats, push an error to the stack*)
   
 let sign (stk : stack) (env : env_stack): stack * env_stack = (*Aaron Massey*)
   match stk with 
     | Int a :: rest -> pushInt (a * -1) rest env (*If there is an Int, multiply it by -1*)
     | Float a :: rest -> pushFloat (a *. -1.0) rest env (*If there is a Float, multiply it by -1.0*)
-    | _ -> pushError stk env (*If there is no Int, push an error to the stack*)
+    | _ -> pushError stk env (*If there is no Int or Float, push an error to the stack*)
 
 let swap (stk : stack) (env: env_stack): stack * env_stack = (*Aaron Massey*)
   match stk with
