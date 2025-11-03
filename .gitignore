@@ -1,7 +1,8 @@
 # Linux File
 .directory
-
+# MacOS File
+.DS_Store
 # Don't save the Output files
 src/*output*
-src/Part_1_Tests/Out
-src/Part_2_Tests/Out
+src/Part_1_Tests/Out/*
+src/Part_2_Tests/Out/*

@@ -210,9 +210,10 @@ let int_arithmetic (op : operation) (stk: stack) (env : env_stack) : stack * env
 
 let arithmetic_helper (op : operation) (stk: stack) (env : env_stack) : stack * env_stack =  (*Aaron Massey*)
   match stk with 
-    | Int a :: Int b :: rest -> int_arithmetic op stk env (*If there are two Ints, call the int_arithmetic function*)
-    | _ -> pushError stk env (*If there are no Ints, push an error to the stack*)
-
+    | Int a :: Int b :: rest -> arithmetic op stk env (*If there are two Ints, call the arithmetic function*)
+    | Float a :: Float b :: rest -> arithmetic op stk env (*If there are two Floats, call the arithmetic function*)
+    | _ -> pushError stk env (*If there are no Ints or Floats, push an error to the stack*)
+  
 let sign (stk : stack) (env : env_stack): stack * env_stack = (*Aaron Massey*)
   match stk with 
     | Int a :: rest -> pushInt (a * -1) rest env (*If there is an Int, multiply it by -1*)
