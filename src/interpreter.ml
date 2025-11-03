@@ -9,7 +9,8 @@
 
 
 type stack_value = (*Aaron Massey*)                                        
-  | Int of int                                              
+  | Int of int
+  | Float of float 
   | Str of string                                           
   | Name of string                                          
   | Bool of bool                                            
@@ -42,9 +43,9 @@ type enviroment = (stack_value * stack_value) list  (*Aaron Massey*)
 (*-----------------------------------------------------*) 
 
 
-let is_letter c = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') (*Checks if a character is a letter*)
+let is_letter c : bool = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') (*Checks if a character is a letter*)
 
-let is_digit c = c >= '0' && c <= '9' (*Checks if a character is a digit*)
+let is_digit c : bool = c >= '0' && c <= '9' (*Checks if a character is a digit*)
 
 let is_valid_name (s : string) : bool = (*Aaron Massey*)
   if String.length s = 0 then false (*If the string is empty, it is not a valid name*)
@@ -69,6 +70,12 @@ let is_valid_int (s : string) : bool = (*Brayden Stille*)
     | Some _ -> true (*If string can be converted to an int it will return true*)
     | None -> false (*If string cannot be converted to an int it will return false*)
 
+let is_valid_float (s : string) : bool = 
+  match float_of_string_opt s with (*Tries to convert the string to a float*)
+    | Some _ -> true (*If string can be converted to a float it will return true*)
+    | None -> false (*If string cannot be converted to a float it will return false*)
+ 
+
 let is_quoted_string (s : string) : bool = (*Brayden Stille*)
   String.length s >= 2 && String.get s 0 = '\"' && String.get s (String.length s - 1) = '\"' 
   (*Checks if the string is at least 2 characters long and if the first and last characters are quotes*)
@@ -76,7 +83,8 @@ let is_quoted_string (s : string) : bool = (*Brayden Stille*)
 
 let string_of_stack_value (v : stack_value) : string =  (*Aaron Massey*)
   match v with                                                
-    | Int i -> string_of_int i (*Converts an Int to a string*)                      
+    | Int i -> string_of_int i (*Converts an Int to a string*)
+    | Float f -> string_of_float f (*Converts a Float to a string*)
     | Str s -> s (*Returns the string*)                   
     | Name n -> n (*Returns the name*)                   
     | Bool b -> if b then ":true:" else ":false:" (*Converts a Bool to a string*)       
@@ -133,6 +141,9 @@ let tokenize_command (s : string) : string list = (*Aaron Massey*)
 let pushInt (n : int) (stk : stack) (env : env_stack): stack * env_stack = (*Brayden Stille*)
   (Int n :: stk, env) (*Takes an Int (n) and pushes it onto the stack*)
 
+let pushFloat (f : float) (stk : stack) (env : env_stack): stack * env_stack = (*Brayden Stille*)
+  (Float f :: stk, env) (*Takes a Float (f) and pushes it onto the stack*)
+
 let pushStr (s : string) (stk : stack) (env : env_stack): stack * env_stack = (*Brayden Stille*)
   (Str s :: stk, env) (*Takes a String (s) and pushes it onto the stack*)
 
@@ -160,6 +171,7 @@ let push (arg : string) (stk : stack) (env : env_stack): stack * env_stack = (*B
     | ":unit:" -> pushUnit stk env (*Calls the pushUnit function with the stack as stk*)
     | arg when is_valid_name arg -> pushName arg stk env(*Calls the pushName function with arg as the name and the stack as stk*)
     | arg when is_valid_int arg -> pushInt (int_of_string arg) stk env (*Calls the pushInt function with arg converted to an int and the stack as stk*)
+    | arg when is_valid_float arg -> pushFloat (float_of_string arg) stk env (*Calls the pushFloat function with arg converted to a float and the stack as stk*)
     | _ -> pushError stk env (*If the argument is not valid, calls the pushError function with the stack as stk*)
  
 
@@ -208,14 +220,55 @@ let int_arithmetic (op : operation) (stk: stack) (env : env_stack) : stack * env
         | _ -> pushError stk env (*If there are no Ints push an error to the stack*)
     ) 
 
+  let float_arithmetic (op : operation) (stk: stack) (env : env_stack) : stack * env_stack =  (*Aaron Massey*)
+    match op with 
+      | Add -> ( 
+        match stk with
+          | Float a :: Float b :: rest -> (*If there are two floats, add them*)
+            pushFloat (b +. a) rest env 
+          | _ -> pushError stk env  (*Otherwise return the original stack with an error*)
+            )
+      | Sub -> (
+        match stk with
+        | Float a :: Float b :: rest ->
+          pushFloat (b -. a) rest env (*If there are two floats, subtract them *)
+        | _ -> pushError stk env (*Otherwise return the original stack with an error*)
+      ) 
+      | Mult -> (
+        match stk with 
+          | Float a :: Float b :: rest ->
+            pushFloat (b *. a) rest env  (*If there are two floats, multiply them *)
+          | _ -> pushError stk env (*Otherwise return the original stack with an error*)
+      ) 
+      | Div -> (
+        match stk with
+          | Float a :: Float b :: rest -> (*If there are two floats, divide them *)
+            if a = 0.0 then (*If the denominator is 0, push the floats back onto the stack with an error*)
+              pushError (Float a :: Float b :: rest) env
+            else
+              pushFloat (b /. a) rest env(*If the floats are valid, divide them*)
+          | _ -> pushError stk env  (*If there are no floats, push an error to the stack*)
+      ) 
+      | Rem ->  (
+        match stk with
+          | Float a :: Float b :: rest -> (*If there are two floats, get the modulo*)
+            if a = 0.0 then
+              pushError (Float a :: Float b :: rest) env (*If the denominator is 0, return the floats to the stack and push an error*)
+            else
+              pushFloat (mod_float b a) rest env (* Otherwise push the modulo (remainder) of the floats*)
+          | _ -> pushError stk env (*If there are no floats push an error to the stack*)
+      )
+
 let arithmetic_helper (op : operation) (stk: stack) (env : env_stack) : stack * env_stack =  (*Aaron Massey*)
   match stk with 
     | Int a :: Int b :: rest -> int_arithmetic op stk env (*If there are two Ints, call the int_arithmetic function*)
+    | Float a :: Float b :: rest -> float_arithmetic op stk env 
     | _ -> pushError stk env (*If there are no Ints, push an error to the stack*)
-
+  
 let sign (stk : stack) (env : env_stack): stack * env_stack = (*Aaron Massey*)
   match stk with 
     | Int a :: rest -> pushInt (a * -1) rest env (*If there is an Int, multiply it by -1*)
+    | Float a :: rest -> pushFloat (a *. -1.0) rest env (*If there is a Float, multiply it by -1.0*)
     | _ -> pushError stk env (*If there is no Int, push an error to the stack*)
 
 let swap (stk : stack) (env: env_stack): stack * env_stack = (*Aaron Massey*)
@@ -311,11 +364,13 @@ let cat (stk : stack) (env : env_stack): stack * env_stack= (*Brayden Stille*)
 let equal_ (stk : stack) (env : env_stack): stack * env_stack= (*Brayden Stille*)
   match stk with
     | Int a :: Int b :: rest -> pushBool (a = b) rest env (*if int a and b are the same return true*)
+    | Float a :: Float b :: rest -> pushBool (a = b) rest env (*if float a and b are the same return true*)
     | _ -> pushError stk env (*if not enough elements push error to the stack*)
 
 let lessThan_ (stk: stack) (env : env_stack): stack * env_stack = (*Brayden Stille*)
   match stk with
     | Int a :: Int b :: rest -> pushBool (b < a) rest env (*if int b is less than int a return true*)
+    | Float a :: Float b :: rest -> pushBool (b < a) rest env (*if float b is less than float a return true*)
     | _ -> pushError stk env (*if not enough elements push error to the stack*)
 
 let assign (stk : stack) (env : env_stack) : stack * env_stack = (*Brayden Stille*)
@@ -332,6 +387,15 @@ let assign (stk : stack) (env : env_stack) : stack * env_stack = (*Brayden Still
               add_to_environment_list name_sv (Int i) current_env
           in
           (Unit::rest, (new_current_env, old_stack) :: outer_envs) (* Push updated top env back *)
+        | Float f :: Name n :: rest -> 
+          let name_sv = Name n in
+          let new_current_env =
+            if check_environment_list n current_env then
+              replace_in_environment_list name_sv (Float f) current_env (*Assigns float to var*)
+            else
+              add_to_environment_list name_sv (Float f) current_env
+          in
+          (Unit::rest, (new_current_env, old_stack) :: outer_envs)
         | Bool b :: Name n :: rest -> 
           let name_sv = Name n in
           let new_current_env =
