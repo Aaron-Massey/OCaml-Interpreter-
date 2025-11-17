@@ -38,6 +38,14 @@ type env_stack = (environment * stack) list
 
 type enviroment = (stack_value * stack_value) list  (*Aaron Massey*)
 
+let invalidName = ["add" ; "sub" ; "pop" ; "push" ; "mult" ; "div" ;
+                  "push" ; "fun" ; "funEnd" ; "and" ; "or" ; "not" ;
+                  "int" ; "float" ; "str" ; "bool" ; "assign" ; "if" ;
+                  "unit" ; "error" ; "rem" ; "name" ; "equal" ; "lessThan" ;
+                  "swap" ; "sign" ; "tostring" ; "println" ; "let" ; "end" ;
+                  "cat"
+                  ]
+
 (*-----------------------------------------------------*) 
 (*|                  Type Validation                  |*) 
 (*-----------------------------------------------------*) 
@@ -438,6 +446,31 @@ let end_ (stk: stack) (env: env_stack) : stack * env_stack = (*Brayden Stille*)
         | top_val :: _ -> (top_val :: stack_before_let, outer_env) (*Pushes the top value of the current stack to the main stack*)
       )
 
+
+
+(*-----------------------------------------------------*) 
+(*|               Part 2 Functions Code               |*) 
+(*-----------------------------------------------------*) 
+
+let funcNameValid (name : string) : bool =
+  let name = String.lowercase_ascii name in
+  not (List.mem name invalidName)
+
+let functionStart (stk: stack) (env : env_stack) : stack * env_stack =
+ match stk with
+  | Name a :: Name b :: rest -> 
+    if funcNameValid a && funcNameValid b then
+      (pushUnit rest env) (*STUB*)
+    else
+      (pushError stk env) (*Pushes error if function names are invalid*)
+  | _ -> (pushError stk env) (*STUB*)
+
+
+let functionEnd (stk: stack) (env : env_stack) : stack * env_stack =
+  match stk with
+    | _ -> (pushError stk env) (*STUB*)
+
+
 (*-----------------------------------------------------*) 
 (*|               Main Interpreter Code               |*) 
 (*-----------------------------------------------------*) 
@@ -485,6 +518,8 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
           | ["if"] -> exec_cmd (if_) stk env (*Calls the if_ function*)
           | ["let"] -> exec_cmd ~resolve:false (let_) stk env (*Calls the let_ function*)
           | ["end"] -> exec_cmd ~resolve:false (end_) stk env (*Calls the end_ function*)
+          | ["fun"] -> exec_cmd (functionStart) stk env (*STUB*)
+          | ["funEnd"] -> exec_cmd (functionEnd) stk env (*STUB*)
           | _ -> exec_cmd (pushError) stk env  (*If command is not recognized; pushError function is called*)
         in
         execute rest new_stk new_env (*Continue executing the rest of the commands*)
