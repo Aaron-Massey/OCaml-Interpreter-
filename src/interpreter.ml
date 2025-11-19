@@ -43,7 +43,7 @@ let invalidName = ["add" ; "sub" ; "pop" ; "push" ; "mult" ; "div" ;
                   "int" ; "float" ; "str" ; "bool" ; "assign" ; "if" ;
                   "unit" ; "error" ; "rem" ; "name" ; "equal" ; "lessThan" ;
                   "swap" ; "sign" ; "tostring" ; "println" ; "let" ; "end" ;
-                  "cat"
+                  "cat" ; "fun" ; "funend" ; "return" ; "call" 
                   ]
 
 (*-----------------------------------------------------*) 
@@ -470,6 +470,14 @@ let functionEnd (stk: stack) (env : env_stack) : stack * env_stack =
   match stk with
     | _ -> (pushError stk env) (*STUB*)
 
+let returnFunc (stk: stack) (env : env_stack) : stack * env_stack =
+  match stk with
+    | _ -> (pushError stk env) (*STUB*)
+
+let callFunc (stk: stack) (env : env_stack) : stack * env_stack =
+  match stk with
+    | _ -> (pushError stk env) (*STUB*)
+
 
 (*-----------------------------------------------------*) 
 (*|               Main Interpreter Code               |*) 
@@ -520,6 +528,8 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
           | ["end"] -> exec_cmd ~resolve:false (end_) stk env (*Calls the end_ function*)
           | ["fun"] -> exec_cmd (functionStart) stk env (*STUB*)
           | ["funEnd"] -> exec_cmd (functionEnd) stk env (*STUB*)
+          | ["return"] -> exec_cmd (returnFunc) stk env (*STUB*)
+          | ["call"] -> exec_cmd (callFunc) stk env (*STUB*)
           | _ -> exec_cmd (pushError) stk env  (*If command is not recognized; pushError function is called*)
         in
         execute rest new_stk new_env (*Continue executing the rest of the commands*)
@@ -536,7 +546,7 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
 (*
 
 let () =
-  let directories = ["Part_1_Tests" ; "Part_2_Tests"] in
+  let directories = ["Part_1_Tests" ; "Part_2_Tests" ; "Part_3_Tests"] in
   let filenames = ["input1.txt";"input2.txt";"input3.txt";"input4.txt";"input5.txt";
                  "input6.txt";"input7.txt";"input8.txt";"input9.txt";"input10.txt"] in 
   List.iter (fun dir ->
