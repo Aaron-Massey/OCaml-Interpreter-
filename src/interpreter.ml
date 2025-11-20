@@ -320,13 +320,18 @@ let replace_in_environment_list (name : stack_value) (value : stack_value) (env_
   let env_without_name = remove_from_environment_list name env_list in 
   add_to_environment_list name value env_without_name 
 
-let rec resolve_names stk env =  
-  List.map(function 
-    | Name n -> 
-        let v = fetch_from_env_stack n env in
-        if v = Error then Name n else v 
-    | other -> other 
-  ) stk
+(* NEW: Only resolve the top N items. This prevents resolving Names that are intended for assignment deep in the stack. *)
+let rec resolve_names stk env n =  
+  if n <= 0 then stk
+  else
+  match stk with
+  | [] -> []
+  | hd :: tl ->
+      let v = match hd with Name n -> fetch_from_env_stack n env | x -> x in
+      let v_res = if v = Error then Name (match hd with Name s -> s | _ -> "") else v in
+      (* Restore original Name if error to allow manual error handling in commands *)
+      let final_v = if v = Error then hd else v_res in 
+      final_v :: (resolve_names tl env (n - 1))
 
 let boolean_logic (op : boolean_op) (stk : stack) (env : env_stack): stack*env_stack = 
   match op with 
@@ -370,6 +375,7 @@ let lessThan_ (stk: stack) (env : env_stack): stack * env_stack =
     | _ -> pushError stk env 
 
 (* Recursive function to update a variable in the nearest scope it exists in *)
+(* NOTE: Only used for inOutFun parameters to support pass-by-reference-like behavior *)
 let rec update_env_stack (name : string) (value : stack_value) (env : env_stack) : env_stack =
   match env with
   | [] -> [] 
@@ -391,40 +397,56 @@ let rec update_env_stack (name : string) (value : stack_value) (env : env_stack)
             let updated_outer = update_env_stack name value outer_scopes in
             (current_scope, saved_stack) :: updated_outer
 
+(* Assign now works on the CURRENT scope only to support shadowing/let-binding behavior *)
 let assign (stk : stack) (env : env_stack) : stack * env_stack = 
   match stk with 
-  | Int i :: Name n :: rest -> 
-      let new_env = update_env_stack n (Int i) env in
-      (Unit::rest, new_env)
-  | Float f :: Name n :: rest -> 
-      let new_env = update_env_stack n (Float f) env in
-      (Unit::rest, new_env)
-  | Bool b :: Name n :: rest -> 
-      let new_env = update_env_stack n (Bool b) env in
-      (Unit::rest, new_env)
-  | Str s :: Name n :: rest -> 
-      let new_env = update_env_stack n (Str s) env in
-      (Unit::rest, new_env)
-  | Unit  :: Name n :: rest -> 
-      let new_env = update_env_stack n (Unit) env in
-      (Unit::rest, new_env)
-  | Closure(t, a, b, e) :: Name n :: rest -> 
-       let new_env = update_env_stack n (Closure(t,a,b,e)) env in
-       (Unit::rest, new_env)
   | Name a :: Name n :: rest ->
-     (* Resolve the value of 'a' first *)
+     (* Case 1: Assigning from a Variable (e.g., push x; push y; assign) *)
+     (* We must resolve 'a' first. *)
      let value = fetch_from_env_stack a env in
      if value = Error then (pushError stk env) 
      else
-       let new_env = update_env_stack n value env in
+       let (current_scope, saved_stack) = List.hd env in
+       let new_scope = 
+         if check_environment_list n current_scope then
+           replace_in_environment_list (Name n) value current_scope
+         else
+           add_to_environment_list (Name n) value current_scope
+       in
+       let new_env = (new_scope, saved_stack) :: (List.tl env) in
        (Unit::rest, new_env)
+
+  | v :: Name n :: rest -> 
+      (* Case 2: Assigning a Literal/Value (e.g., push x; push 5; assign) *)
+      (* 'v' captures Int, Float, Bool, Str, Unit, Closure, or Error *)
+      let (current_scope, saved_stack) = List.hd env in
+      let new_scope = 
+        if check_environment_list n current_scope then
+          replace_in_environment_list (Name n) v current_scope
+        else
+          add_to_environment_list (Name n) v current_scope
+      in
+      let new_env = (new_scope, saved_stack) :: (List.tl env) in
+      (Unit::rest, new_env)
+
   | _ -> (pushError stk env)
+
+(* Helper: resolve only arguments for function calls from the list *)
+let resolve_val (v : stack_value) (env : env_stack) : stack_value =
+  match v with
+  | Name n -> 
+      let res = fetch_from_env_stack n env in
+      if res = Error then Error else res
+  | x -> x
 
 let if_ (stk: stack) (env : env_stack): stack*env_stack = 
   match stk with 
-    | trueVal :: falseVal :: Bool condition :: rest ->
-      if condition then (trueVal :: rest, env) 
-      else (falseVal :: rest, env) 
+    | trueVal :: falseVal :: condition :: rest ->
+      (* Manually resolve ONLY the condition (3rd item), preserving branches *)
+      let cond_val = resolve_val condition env in
+      (match cond_val with
+       | Bool c -> if c then (trueVal :: rest, env) else (falseVal :: rest, env)
+       | _ -> pushError stk env)
     | _ -> (pushError stk env)
 
 let let_ (stk: stack) (env: env_stack) : stack * env_stack = 
@@ -468,14 +490,6 @@ let rec extract_body (commands : string list) (acc : string list) (depth : int) 
           else extract_body rest (cmd :: acc) (depth - 1)
       | _ -> extract_body rest (cmd :: acc) depth
 
-(* Resolving logic for arguments on stack that might be names *)
-let resolve_val (v : stack_value) (env : env_stack) : stack_value =
-  match v with
-  | Name n -> 
-      let res = fetch_from_env_stack n env in
-      if res = Error then Error else res
-  | x -> x
-
 
 (*-----------------------------------------------------*) 
 (*|               Main Interpreter Code               |*) 
@@ -486,8 +500,9 @@ let interpreter ( (input : string ), (output : string)) : unit =
   let lines = read_lines input in
   let oc = open_out output in  
 
-  let exec_cmd ?(resolve=true) f (stk : stack) (env : env_stack) : (stack * env_stack) =
-    let adjusted_stk = if resolve then resolve_names stk env else stk in
+  (* UPDATED: exec_cmd now takes args_to_resolve count *)
+  let exec_cmd ?(n_args=0) f (stk : stack) (env : env_stack) : (stack * env_stack) =
+    let adjusted_stk = resolve_names stk env n_args in
     f adjusted_stk env
   in
 
@@ -527,7 +542,6 @@ let interpreter ( (input : string ), (output : string)) : unit =
                       let new_env = (new_scope, old_s) :: (List.tl env) in
                       
                       (* Push Unit and continue with REMAINING commands *)
-                      (* FIXED: match syntax error by using let binding *)
                       let (s, e) = pushUnit stk new_env in
                       execute remaining s e
                     else
@@ -541,8 +555,8 @@ let interpreter ( (input : string ), (output : string)) : unit =
 
         (* Handle Function Call *)
         | ["call"] -> 
-             (* Call pops funName and arg. We need resolve=false to see names. *)
-             let (call_stk, call_env) = exec_cmd ~resolve:false (fun s e -> (s, e)) stk env in
+             (* Call pops funName and arg. We resolve manually in the match below. *)
+             let (call_stk, call_env) = exec_cmd ~n_args:0 (fun s e -> (s, e)) stk env in
              (match call_stk with
               | arg_item :: func_item :: stack_rest ->
                   (* Resolve function to closure *)
@@ -594,27 +608,27 @@ let interpreter ( (input : string ), (output : string)) : unit =
           let (new_stk, new_env) =
             match tokens with
             (* PUSH, ASSIGN, LET, TOSTRING, PRINTLN MUST NOT RESOLVE NAMES *)
-            | ["push"; arg] -> exec_cmd ~resolve:false (push arg) stk env 
+            | ["push"; arg] -> exec_cmd ~n_args:0 (push arg) stk env 
             | ["pop"] -> exec_cmd (pop) stk env 
-            | ["add"] -> exec_cmd (arithmetic_helper Add) stk env 
-            | ["sub"] -> exec_cmd (arithmetic_helper Sub) stk env 
-            | ["mult"] -> exec_cmd (arithmetic_helper Mult) stk env 
-            | ["div"] -> exec_cmd (arithmetic_helper Div) stk env 
-            | ["rem"] -> exec_cmd (arithmetic_helper Rem) stk env 
-            | ["sign"] -> exec_cmd (sign) stk env 
+            | ["add"] -> exec_cmd ~n_args:2 (arithmetic_helper Add) stk env 
+            | ["sub"] -> exec_cmd ~n_args:2 (arithmetic_helper Sub) stk env 
+            | ["mult"] -> exec_cmd ~n_args:2 (arithmetic_helper Mult) stk env 
+            | ["div"] -> exec_cmd ~n_args:2 (arithmetic_helper Div) stk env 
+            | ["rem"] -> exec_cmd ~n_args:2 (arithmetic_helper Rem) stk env 
+            | ["sign"] -> exec_cmd ~n_args:1 (sign) stk env 
             | ["swap"] -> exec_cmd (swap) stk env 
-            | ["toString"] -> exec_cmd ~resolve:false (tostring) stk env 
-            | ["println"] -> exec_cmd ~resolve:false (println oc) stk env  
-            | ["cat"] -> exec_cmd (cat) stk env 
-            | ["and"] -> exec_cmd (boolean_logic And) stk env 
-            | ["or"] -> exec_cmd (boolean_logic Or) stk env 
-            | ["not"] -> exec_cmd (boolean_logic Not) stk env 
-            | ["equal"] -> exec_cmd (equal_) stk env 
-            | ["lessThan"] -> exec_cmd (lessThan_) stk env 
-            | ["assign"] -> exec_cmd ~resolve:false (assign) stk env 
-            | ["if"] -> exec_cmd (if_) stk env 
-            | ["let"] -> exec_cmd ~resolve:false (let_) stk env 
-            | ["end"] -> exec_cmd ~resolve:false (end_) stk env 
+            | ["toString"] -> exec_cmd ~n_args:0 (tostring) stk env 
+            | ["println"] -> exec_cmd ~n_args:0 (println oc) stk env  
+            | ["cat"] -> exec_cmd ~n_args:2 (cat) stk env 
+            | ["and"] -> exec_cmd ~n_args:2 (boolean_logic And) stk env 
+            | ["or"] -> exec_cmd ~n_args:2 (boolean_logic Or) stk env 
+            | ["not"] -> exec_cmd ~n_args:1 (boolean_logic Not) stk env 
+            | ["equal"] -> exec_cmd ~n_args:2 (equal_) stk env 
+            | ["lessThan"] -> exec_cmd ~n_args:2 (lessThan_) stk env 
+            | ["assign"] -> exec_cmd ~n_args:0 (assign) stk env 
+            | ["if"] -> exec_cmd ~n_args:0 (if_) stk env (* if_ manually resolves 3rd arg *)
+            | ["let"] -> exec_cmd ~n_args:0 (let_) stk env 
+            | ["end"] -> exec_cmd ~n_args:0 (end_) stk env 
             | _ -> exec_cmd (pushError) stk env  
           in
           execute rest new_stk new_env 
