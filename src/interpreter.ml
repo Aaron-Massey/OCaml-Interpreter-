@@ -634,9 +634,7 @@ let interpreter ( (input : string ), (output : string)) : unit =
           execute rest new_stk new_env 
   in
 
-  let (final_stack, _) = execute lines [] [ ([], []) ] in 
-
-  List.iter (fun line -> output_string oc (string_of_stack_value line ^ "\n")) final_stack;
+  let _ = execute lines [] [ ([], []) ] in
   close_out oc
 (*-----------------------------------------------------*) 
 (*|        Used directories to test program           |*)
