@@ -86,7 +86,7 @@ let is_quoted_string (s : string) : bool =
 
 
 let string_of_stack_value (v : stack_value) : string =  
-  match v with                                                
+  match v with                                             
     | Int i -> string_of_int i 
     | Float f -> let s = string_of_float f in
                  if String.get s (String.length s - 1) = '.' then s ^ "0" else s
@@ -107,7 +107,8 @@ let read_lines (filename : string) : string list =
     try
       let line = input_line ic in 
       loop (line :: acc) 
-    with End_of_file -> 
+    with 
+      End_of_file -> 
       close_in ic;
       List.rev acc 
   in
@@ -195,18 +196,27 @@ let arithmetic (op : operation) (stk: stack) (env : env_stack) : stack * env_sta
       match stk with
         | Int a :: Int b :: rest -> pushInt (b + a) rest env
         | Float a :: Float b :: rest -> pushFloat (b +. a) rest env
+        (* Mixed: Promote Int to Float *)
+        | Int a :: Float b :: rest -> pushFloat (b +. float_of_int a) rest env
+        | Float a :: Int b :: rest -> pushFloat ((float_of_int b) +. a) rest env
         | _ -> pushError stk env 
           )
     | Sub -> (
       match stk with
       | Int a :: Int b :: rest -> pushInt (b - a) rest env 
       | Float a :: Float b :: rest -> pushFloat (b -. a) rest env 
+      (* Mixed: Promote Int to Float *)
+      | Int a :: Float b :: rest -> pushFloat (b -. float_of_int a) rest env
+      | Float a :: Int b :: rest -> pushFloat ((float_of_int b) -. a) rest env
       | _ -> pushError stk env 
     ) 
     | Mult -> (
       match stk with 
         | Int a :: Int b :: rest -> pushInt (b * a) rest env  
         | Float a :: Float b :: rest -> pushFloat (b *. a) rest env  
+        (* Mixed: Promote Int to Float *)
+        | Int a :: Float b :: rest -> pushFloat (b *. float_of_int a) rest env
+        | Float a :: Int b :: rest -> pushFloat ((float_of_int b) *. a) rest env
         | _ -> pushError stk env 
     ) 
     | Div -> (
@@ -217,6 +227,13 @@ let arithmetic (op : operation) (stk: stack) (env : env_stack) : stack * env_sta
         | Float a :: Float b :: rest -> 
           if a = 0.0 then pushError (Float a :: Float b :: rest) env
           else pushFloat (b /. a) rest env
+        (* Mixed: Promote Int to Float *)
+        | Int a :: Float b :: rest -> 
+          if a = 0 then pushError (Int a :: Float b :: rest) env
+          else pushFloat (b /. float_of_int a) rest env
+        | Float a :: Int b :: rest -> 
+          if a = 0.0 then pushError (Float a :: Int b :: rest) env
+          else pushFloat ((float_of_int b) /. a) rest env
         | _ -> pushError stk env  
     ) 
     | Rem ->  (
@@ -227,13 +244,23 @@ let arithmetic (op : operation) (stk: stack) (env : env_stack) : stack * env_sta
         | Float a :: Float b :: rest -> 
           if a = 0.0 then pushError (Float a :: Float b :: rest) env 
           else pushFloat (mod_float b a) rest env 
+        (* Mixed: Promote Int to Float *)
+        | Int a :: Float b :: rest -> 
+          if a = 0 then pushError (Int a :: Float b :: rest) env
+          else pushFloat (mod_float b (float_of_int a)) rest env
+        | Float a :: Int b :: rest -> 
+          if a = 0.0 then pushError (Float a :: Int b :: rest) env
+          else pushFloat (mod_float (float_of_int b) a) rest env
         | _ -> pushError stk env 
-    )    
+    )   
 
 let arithmetic_helper (op : operation) (stk: stack) (env : env_stack) : stack * env_stack =  
   match stk with 
     | Int a :: Int b :: rest -> arithmetic op stk env 
     | Float a :: Float b :: rest -> arithmetic op stk env 
+    (* Add Mixed cases to helper dispatch *)
+    | Int a :: Float b :: rest -> arithmetic op stk env
+    | Float a :: Int b :: rest -> arithmetic op stk env
     | _ -> pushError stk env 
   
 let sign (stk : stack) (env : env_stack): stack * env_stack = 
@@ -255,7 +282,8 @@ let tostring (stk : stack) (env : env_stack): stack * env_stack =
 let println (out : out_channel) (stk : stack) (env : env_stack) : stack*env_stack = 
   match stk with
     | [] -> pushError stk env 
-    | v :: rest -> Printf.fprintf out "%s\n" (string_of_stack_value v); (rest, env) 
+    | v :: rest -> Printf.fprintf out "%s\n" (string_of_stack_value v);
+      (rest, env) 
 
 (*-----------------------------------------------------*) 
 (*|               Part 2 Functions Code               |*) 
@@ -327,52 +355,70 @@ let equal_ (stk : stack) (env : env_stack): stack * env_stack=
   match stk with
     | Int a :: Int b :: rest -> pushBool (a = b) rest env 
     | Float a :: Float b :: rest -> pushBool (a = b) rest env 
+    (* Mixed: Promote Int to Float *)
+    | Int a :: Float b :: rest -> pushBool ((float_of_int a) = b) rest env
+    | Float a :: Int b :: rest -> pushBool (a = (float_of_int b)) rest env
     | _ -> pushError stk env 
 
 let lessThan_ (stk: stack) (env : env_stack): stack * env_stack = 
   match stk with
     | Int a :: Int b :: rest -> pushBool (b < a) rest env 
     | Float a :: Float b :: rest -> pushBool (b < a) rest env 
+    (* Mixed: Promote Int to Float *)
+    | Int a :: Float b :: rest -> pushBool (b < (float_of_int a)) rest env
+    | Float a :: Int b :: rest -> pushBool ((float_of_int b) < a) rest env
     | _ -> pushError stk env 
 
+(* Recursive function to update a variable in the nearest scope it exists in *)
+let rec update_env_stack (name : string) (value : stack_value) (env : env_stack) : env_stack =
+  match env with
+  | [] -> [] 
+  | (current_scope, saved_stack) :: outer_scopes ->
+      (* 1. Check if the variable is in the current scope *)
+      if check_environment_list name current_scope then
+        let new_scope = replace_in_environment_list (Name name) value current_scope in
+        (new_scope, saved_stack) :: outer_scopes
+      else
+        (* 2. If not in current, check if it exists in outer scopes *)
+        (* We use fetch_from_env_stack to verify existence before recursing *)
+        match fetch_from_env_stack name outer_scopes with
+        | Error -> 
+            (* 3. Not found anywhere? Define it in the CURRENT scope *)
+            let new_scope = add_to_environment_list (Name name) value current_scope in
+            (new_scope, saved_stack) :: outer_scopes
+        | _ -> 
+            (* 4. It exists in an outer scope, recurse down to update it there *)
+            let updated_outer = update_env_stack name value outer_scopes in
+            (current_scope, saved_stack) :: updated_outer
+
 let assign (stk : stack) (env : env_stack) : stack * env_stack = 
-  match env with 
-  | [] -> (pushError stk []) 
-  | (current_env, old_stack) :: outer_envs -> 
-      let update_env n val_to_assign = 
-         let name_sv = Name n in
-         if check_environment_list n current_env then
-            replace_in_environment_list name_sv val_to_assign current_env
-         else
-            add_to_environment_list name_sv val_to_assign current_env
-      in
-      (match stk with 
-        | Int i :: Name n :: rest -> 
-           let new_env = update_env n (Int i) in
-           (Unit::rest, (new_env, old_stack) :: outer_envs)
-        | Float f :: Name n :: rest -> 
-           let new_env = update_env n (Float f) in
-           (Unit::rest, (new_env, old_stack) :: outer_envs)
-        | Bool b :: Name n :: rest -> 
-           let new_env = update_env n (Bool b) in
-           (Unit::rest, (new_env, old_stack) :: outer_envs)
-        | Str s :: Name n :: rest -> 
-           let new_env = update_env n (Str s) in
-           (Unit::rest, (new_env, old_stack) :: outer_envs)
-        | Unit  :: Name n :: rest -> 
-           let new_env = update_env n (Unit) in
-           (Unit::rest, (new_env, old_stack) :: outer_envs)
-        | Closure(t, a, b, e) :: Name n :: rest -> 
-            let new_env = update_env n (Closure(t,a,b,e)) in
-            (Unit::rest, (new_env, old_stack) :: outer_envs)
-        | Name a :: Name n :: rest ->
-          let value = fetch_from_env_stack a env in
-          if value = Error then (pushError stk env) 
-          else
-            let new_env = update_env n value in
-            (Unit::rest, (new_env, old_stack) :: outer_envs)
-        | _ -> (pushError stk env) 
-      )
+  match stk with 
+  | Int i :: Name n :: rest -> 
+      let new_env = update_env_stack n (Int i) env in
+      (Unit::rest, new_env)
+  | Float f :: Name n :: rest -> 
+      let new_env = update_env_stack n (Float f) env in
+      (Unit::rest, new_env)
+  | Bool b :: Name n :: rest -> 
+      let new_env = update_env_stack n (Bool b) env in
+      (Unit::rest, new_env)
+  | Str s :: Name n :: rest -> 
+      let new_env = update_env_stack n (Str s) env in
+      (Unit::rest, new_env)
+  | Unit  :: Name n :: rest -> 
+      let new_env = update_env_stack n (Unit) env in
+      (Unit::rest, new_env)
+  | Closure(t, a, b, e) :: Name n :: rest -> 
+       let new_env = update_env_stack n (Closure(t,a,b,e)) env in
+       (Unit::rest, new_env)
+  | Name a :: Name n :: rest ->
+     (* Resolve the value of 'a' first *)
+     let value = fetch_from_env_stack a env in
+     if value = Error then (pushError stk env) 
+     else
+       let new_env = update_env_stack n value env in
+       (Unit::rest, new_env)
+  | _ -> (pushError stk env)
 
 let if_ (stk: stack) (env : env_stack): stack*env_stack = 
   match stk with 
@@ -481,12 +527,16 @@ let interpreter ( (input : string ), (output : string)) : unit =
                       let new_env = (new_scope, old_s) :: (List.tl env) in
                       
                       (* Push Unit and continue with REMAINING commands *)
-                      match pushUnit stk new_env with
-                      | (s, e) -> execute remaining s e
+                      (* FIXED: match syntax error by using let binding *)
+                      let (s, e) = pushUnit stk new_env in
+                      execute remaining s e
                     else
-                      match pushError stk env with (s, e) -> execute rest s e
+                      let (s, e) = pushError stk env in 
+                      execute rest s e
                   end
-              | _ -> match pushError stk env with (s, e) -> execute rest s e
+              | _ -> 
+                  let (s, e) = pushError stk env in 
+                  execute rest s e
              )
 
         (* Handle Function Call *)
@@ -500,7 +550,7 @@ let interpreter ( (input : string ), (output : string)) : unit =
                   (* Resolve argument to value *)
                   let arg_val = resolve_val arg_item call_env in
 
-                  (match closure_val with
+                 (match closure_val with
                    | Closure(ftype, paramName, body, saved_env_data) ->
                        if arg_val = Error then match pushError stk env with (s, e) -> execute rest s e
                        else
@@ -527,17 +577,8 @@ let interpreter ( (input : string ), (output : string)) : unit =
                              | Name actual_name_str -> 
                                  (* Lookup formal param in the FUNCTION'S final environment *)
                                  let final_param_val = fetch_from_env_stack paramName res_env in
-                                 if final_param_val = Error then call_env 
-                                 else
-                                    (* Update actual parameter in CALLER'S environment *)
-                                    let (curr, s) = List.hd call_env in
-                                    let outer = List.tl call_env in
-                                    let updated_curr = 
-                                       if check_environment_list actual_name_str curr then
-                                          replace_in_environment_list (Name actual_name_str) final_param_val curr
-                                       else curr (* If not in current scope, ignore per spec/simplicity *)
-                                    in
-                                    (updated_curr, s) :: outer
+                                 if final_param_val = Error then call_env
+                                 else update_env_stack actual_name_str final_param_val call_env
                              | _ -> call_env (* If arg was not a name, no update *)
                            else
                              call_env
@@ -602,5 +643,3 @@ let () =
         Printf.printf "Warning: Skipping missing file %s\n" input_path
     ) filenames
   ) directories;
-  
- 
