@@ -6,7 +6,7 @@
 (*|                  Type Definitions                 |*) 
 (*-----------------------------------------------------*) 
 
-type stack_value =                                        
+type stack_value = (*Aaron Massey*)                                  
   | Int of int
   | Float of float 
   | Str of string                                           
@@ -14,7 +14,6 @@ type stack_value =
   | Bool of bool                                            
   | Error                                                   
   | Unit
-  (* Closure: Type (fun/inOut), ArgName, BodyLines, ClosureEnvironment *)
   | Closure of string * string * string list * (stack_value * stack_value) list list
 
 type operation = 
@@ -37,95 +36,96 @@ type environment = var list
 
 type env_stack = (environment * stack) list 
 
-let invalidName = ["add" ; "sub" ; "pop" ; "push" ; "mult" ; "div" ;
-                  "push" ; "fun" ; "funEnd" ; "and" ; "or" ; "not" ;
+let invalidName = ["add" ; "sub" ; "pop" ; "push" ; "mult" ; "div" ; "push" ; "fun" ; "funEnd" ; "and" ; "or" ; "not" ;
                   "int" ; "float" ; "str" ; "bool" ; "assign" ; "if" ;
                   "unit" ; "error" ; "rem" ; "name" ; "equal" ; "lessThan" ;
                   "swap" ; "sign" ; "tostring" ; "println" ; "let" ; "end" ;
-                  "cat" ; "fun" ; "funend" ; "return" ; "call" ; "inoutfun"
-                  ]
+                  "cat" ; "fun" ; "funend" ; "return" ; "call" ; "inoutfun" 
+                  ] (*Aaron Massey*)
 
 (*-----------------------------------------------------*) 
 (*|                  Type Validation                  |*) 
 (*-----------------------------------------------------*) 
 
-let is_letter c : bool = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+let is_letter c : bool = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') (*Checks if a character is a letter*)
 
-let is_digit c : bool = c >= '0' && c <= '9'
+let is_digit c : bool = c >= '0' && c <= '9' (*Checks if a character is a digit*)
 
-let is_valid_name (s : string) : bool = 
-  if String.length s = 0 then false 
+let is_valid_name (s : string) : bool = (*Aaron Massey*)
+  if String.length s = 0 then false (*If the string is empty, it is not a valid name*)
   else
     let first_char = s.[0] in 
-    if not (is_letter first_char || first_char = '_') then 
+    if not (is_letter first_char || first_char = '_') then (* The first character must be a letter or '_'*)
       false
     else
       let rec check_rest i = 
         if i >= String.length s then true
         else
           let char = s.[i] in
-          if is_letter char || is_digit char || char = '_' then 
+          if is_letter char || is_digit char || char = '_' then (*Every element must be either a digit, letter, or '_'*)
           check_rest (i + 1)
           else
             false
     in
     check_rest 1
 
-let is_valid_int (s : string) : bool = 
-  match int_of_string_opt s with 
-    | Some _ -> true 
-    | None -> false 
+let is_valid_int (s : string) : bool = (*Brayden Stille*)
+   match int_of_string_opt s with (*Tries to convert the string to an int*)
+    | Some _ -> true (*If string can be converted to an int it will return true*)
+    | None -> false (*If string cannot be converted to an int it will return false*)
 
-let is_valid_float (s : string) : bool = 
-  match float_of_string_opt s with 
-    | Some _ -> true 
-    | None -> false 
+let is_valid_float (s : string) : bool = (*Brayden Stille*)
+  match float_of_string_opt s with (*Tries to convert the string to a float*)
+    | Some _ -> true (*If string can be converted to a float it will return true*)
+    | None -> false (*If string cannot be converted to a float it will return false*)
  
-let is_quoted_string (s : string) : bool = 
+let is_quoted_string (s : string) : bool = (*Brayden Stille*)
   String.length s >= 2 && String.get s 0 = '\"' && String.get s (String.length s - 1) = '\"' 
+  (*Checks if the string is at least 2 characters long and if the first and last characters are quotes*)
 
 
-let string_of_stack_value (v : stack_value) : string =  
+let string_of_stack_value (v : stack_value) : string =  (*Aaron Massey*)
   match v with                                             
-    | Int i -> string_of_int i 
-    | Float f -> let s = string_of_float f in
-                 if String.get s (String.length s - 1) = '.' then s ^ "0" else s
-    | Str s -> s                 
-    | Name n -> n                 
-    | Bool b -> if b then ":true:" else ":false:"       
-    | Error -> ":error:"     
-    | Unit  -> ":unit:"   
-    | Closure _ -> ":fun:"
+    | Int i -> string_of_int i (*Convert int to string*)
+    | Float f -> let s = string_of_float f in (*Convert float to string*)
+                 if String.get s (String.length s - 1) = '.' then s ^ "0" else s (*Ensure float has decimal part*)
+    | Str s -> s  (*Convert string to string*)               
+    | Name n -> n (*Convert name to string*)
+    | Bool b -> if b then ":true:" else ":false:" (*Convert bool to string*)      
+    | Error -> ":error:" (*Convert error to string*)    
+    | Unit  -> ":unit:" (*Convert unit to string*)  
+    | Closure _ -> ":fun:" (*Convert closure to string*)
 
 (*-----------------------------------------------------*) 
 (*|                   File Handling                   |*) 
 (*-----------------------------------------------------*) 
 
-let read_lines (filename : string) : string list = 
-  let ic = open_in filename in 
-  let rec loop acc = 
+(* Read File into FIFO String List (Stack)*)
+let read_lines (filename : string) : string list = (*Aaron Massey*)
+  let ic = open_in filename in (* Open the file *) 
+  let rec loop acc = (* Recursive function that adds lines to list*)
     try
       let line = input_line ic in 
-      loop (line :: acc) 
+      loop (line :: acc) (* Add the line to to list *)
     with 
       End_of_file -> 
-      close_in ic;
-      List.rev acc 
+      close_in ic; (* Close the file*)
+      List.rev acc (* Reverse the list so it maintains FIFO order*)
   in
   loop []
 
-let write_lines (filename : string) (stack : stack) : unit =  
-  let oc = open_out filename in 
+let write_lines (filename : string) (stack : stack) : unit =   (*Aaron Massey*)
+  let oc = open_out filename in (*Open the output file*)
   try 
-    List.iter (fun line -> output_string oc (string_of_stack_value line ^ "\n")) stack;
-    close_out oc 
+    List.iter (fun line -> output_string oc (string_of_stack_value line ^ "\n")) stack; (*Write each line to the output file*)
+    close_out oc (*Close the output file*)
   with e ->
-    close_out_noerr oc;
-    raise e 
+    close_out_noerr oc; (*Close the output file without raising an error*)
+    raise e (*raises the error*)
 
-let tokenize_command (s : string) : string list = 
-  let s = String.trim s in 
-  if String.length s = 0 then [] 
+let tokenize_command (s : string) : string list = (*Aaron Massey*)
+  let s = String.trim s in (*Trims whitespace from the string*)
+  if String.length s = 0 then [] (*If the string is empty, return an empty list*)
   else
     match String.index_opt s ' ' with 
       | None -> [s] 
@@ -133,42 +133,41 @@ let tokenize_command (s : string) : string list =
         let cmd = String.sub s 0 idx in
         let arg = String.sub s (idx + 1) (String.length s - idx - 1) |> String.trim in [cmd; arg] 
 
-(* Helper to split arguments further (e.g., "funName argName") *)
-let split_args (s : string) : string list =
-  let s = String.trim s in
-  match String.index_opt s ' ' with
-  | None -> [s]
+let split_args (s : string) : string list = (*Brayden Stille*)
+  let s = String.trim s in (*Trims whitespace from the string*)
+  match String.index_opt s ' ' with 
+  | None -> [s] (*If there is no space, return the whole string as a single argument*)
   | Some idx ->
-      let a = String.sub s 0 idx in
-      let b = String.sub s (idx + 1) (String.length s - idx - 1) |> String.trim in
-      [a; b]
+      let a = String.sub s 0 idx in (*Get the first argument*)
+      let b = String.sub s (idx + 1) (String.length s - idx - 1) |> String.trim in (*Get the second argument*)
+      [a; b] (*Return the arguments as a list*)
 
 (*-----------------------------------------------------*) 
 (*|             Command Implementations               |*) 
 (*-----------------------------------------------------*) 
 
-let pushInt (n : int) (stk : stack) (env : env_stack): stack * env_stack = 
-  (Int n :: stk, env) 
+let pushInt (n : int) (stk : stack) (env : env_stack): stack * env_stack = (*Brayden Stille*)
+  (Int n :: stk, env) (*Takes an Int (n) and pushes it onto the stack*)
 
-let pushFloat (f : float) (stk : stack) (env : env_stack): stack * env_stack = 
-  (Float f :: stk, env) 
+let pushFloat (f : float) (stk : stack) (env : env_stack): stack * env_stack = (*Brayden Stille*)
+  (Float f :: stk, env) (*Takes a Float (f) and pushes it onto the stack*)
 
-let pushStr (s : string) (stk : stack) (env : env_stack): stack * env_stack = 
-  (Str s :: stk, env) 
+let pushStr (s : string) (stk : stack) (env : env_stack): stack * env_stack = (*Brayden Stille*)
+  (Str s :: stk, env) (*Takes a String (s) and pushes it onto the stack*)
 
-let pushName (name : string) (stk : stack) (env : env_stack): stack * env_stack = 
-  (Name name :: stk, env) 
+let pushName (name : string) (stk : stack) (env : env_stack): stack * env_stack = (*Brayden Stille*)
+  (Name name :: stk, env) (*Takes a Name (name) and pushes it onto the stack*)
 
-let pushBool (b : bool) (stk : stack) (env : env_stack): stack * env_stack = 
-  (Bool b :: stk, env) 
+let pushBool (b : bool) (stk : stack) (env : env_stack): stack * env_stack = (*Brayden Stille*)
+  (Bool b :: stk, env) (*Takes a Bool (b) and pushes it onto the stack*)
 
-let pushError (stk : stack) (env : env_stack): stack * env_stack = 
-  (Error :: stk, env) 
+let pushError (stk : stack) (env : env_stack): stack * env_stack = (*Brayden Stille*)
+  (Error :: stk, env) (*Pushes an Error onto the stack*)
 
-let pushUnit (stk : stack) (env : env_stack): stack * env_stack = 
-  (Unit :: stk, env)
+let pushUnit (stk : stack) (env : env_stack): stack * env_stack = (*Brayden Stille*)
+  (Unit :: stk, env) (*Pushes a Unit onto the stack*)
 
-let push (arg : string) (stk : stack) (env : env_stack): stack * env_stack = 
+let push (arg : string) (stk : stack) (env : env_stack): stack * env_stack = (*Brayden Stille*)
   if is_quoted_string arg then 
     let s = String.sub arg 1 (String.length arg - 2) in 
       pushStr s stk env 
