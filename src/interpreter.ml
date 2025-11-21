@@ -319,61 +319,60 @@ let replace_in_environment_list (name : stack_value) (value : stack_value) (env_
   let env_without_name = remove_from_environment_list name env_list in (*Removes the name-value pair from the environment list*)
   add_to_environment_list name value env_without_name (*Adds the new name-value pair to the environment list*)
 
-let rec resolve_names stk env n =  
-  if n <= 0 then stk
+let rec resolve_names stk env n =  (*Aaron Massey*)
+  if n <= 0 then stk  (*No more names to resolve*)
   else
   match stk with
-  | [] -> []
-  | hd :: tl ->
-      let v = match hd with Name n -> fetch_from_env_stack n env | x -> x in
-      let v_res = if v = Error then Name (match hd with Name s -> s | _ -> "") else v in
-      (* Restore original Name if error to allow manual error handling in commands *)
-      let final_v = if v = Error then hd else v_res in 
-      final_v :: (resolve_names tl env (n - 1))
+  | [] -> [] (*If the stack is empty, return an empty list*)
+  | hd :: tl -> (*Resolve the head and recurse on the tail*)
+      let v = match hd with Name n -> fetch_from_env_stack n env | x -> x in (*Fetch the value from the environment if it's a Name*)
+      let v_res = if v = Error then Name (match hd with Name s -> s | _ -> "") else v in (*If the value is Error, keep it as Name otherwise, use the resolved value*)
+      let final_v = if v = Error then hd else v_res in (*Decide whether to keep the original Name or use the resolved value*)
+      final_v :: (resolve_names tl env (n - 1)) (*Recurse on the tail with decremented n*)
 
-let boolean_logic (op : boolean_op) (stk : stack) (env : env_stack): stack*env_stack = 
-  match op with 
-    | And -> ( 
+let boolean_logic (op : boolean_op) (stk : stack) (env : env_stack): stack*env_stack = (*Brayden Stille*)
+  match op with (*Matches boolean operations*)
+    | And -> ( (*If op is And*)
       match stk with
-        | Bool a :: Bool b :: rest -> pushBool (b && a) rest env 
-        | _ -> pushError stk env 
+        | Bool a :: Bool b :: rest -> pushBool (b && a) rest env (*If both are true return true else false*)
+        | _ -> pushError stk env (*If not enough elements push error to the stack*)
     )
-    | Or -> ( 
+    | Or -> ( (*If op is Or*)
       match stk with
-        | Bool a :: Bool b :: rest -> pushBool (b || a) rest env 
-        | _ -> pushError stk env 
+        | Bool a :: Bool b :: rest -> pushBool (b || a) rest env (*If either are true return true if neither are true return false*)
+        | _ -> pushError stk env (*If not enough elements push error to the stack*)
     )
-    | Not -> ( 
+    | Not -> ( (*If op is Not*)
       match stk with
-        | Bool a :: rest -> pushBool (not a) rest env  
-        | _ -> pushError stk env 
+        | Bool a :: rest -> pushBool (not a) rest env  (*If true return false, if false return true*)
+        | _ -> pushError stk env (*If wrong element push error to the stack*)
     )
 
-let cat (stk : stack) (env : env_stack): stack * env_stack= 
+let cat (stk : stack) (env : env_stack): stack * env_stack = (*Brayden Stille*)
   match stk with
-    | Str a :: Str b :: rest -> pushStr (b ^ a) rest env 
-    | _ -> pushError stk env 
+    | Str a :: Str b :: rest -> pushStr (b ^ a) rest env (*Concatenates two strings together*)
+    | _ -> pushError stk env (*If not enough elements push error to the stack*)
 
-let equal_ (stk : stack) (env : env_stack): stack * env_stack= 
+let equal_ (stk : stack) (env : env_stack): stack * env_stack = (*Brayden Stille*)
   match stk with
-    | Int a :: Int b :: rest -> pushBool (a = b) rest env 
-    | Float a :: Float b :: rest -> pushBool (a = b) rest env 
+    | Int a :: Int b :: rest -> pushBool (a = b) rest env (*Compares two Ints and checks if they are equal to eachother*)
+    | Float a :: Float b :: rest -> pushBool (a = b) rest env (*Compares two Floats and checks if they are equal to eachother*)
+    | Int a :: Float b :: rest -> pushBool ((float_of_int a) = b) rest env (*Compares an Int and a Float, promoting the Int to Float, and checks if they are equal to eachother*)
+    | Float a :: Int b :: rest -> pushBool (a = (float_of_int b)) rest env (*Compares a Float and an Int, promoting the Int to Float, and checks if they are equal to eachother*)
+    | _ -> pushError stk env (*If not enough elements push error to the stack*)
+
+let lessThan_ (stk: stack) (env : env_stack): stack * env_stack = (*Brayden Stille*)
+  match stk with
+    | Int a :: Int b :: rest -> pushBool (b < a) rest env (*Compares two Ints and checks if the first is less than the second*)
+    | Float a :: Float b :: rest -> pushBool (b < a) rest env (*Compares two Floats and checks if the first is less than the second*)
     (* Mixed: Promote Int to Float *)
-    | Int a :: Float b :: rest -> pushBool ((float_of_int a) = b) rest env
-    | Float a :: Int b :: rest -> pushBool (a = (float_of_int b)) rest env
-    | _ -> pushError stk env 
+    | Int a :: Float b :: rest -> pushBool (b < (float_of_int a)) rest env  (*Compares an Int and a Float, promoting the Int to Float, and checks if the first is less than the second*)
+    | Float a :: Int b :: rest -> pushBool ((float_of_int b) < a) rest env (*Compares a Float and an Int, promoting the Int to Float, and checks if the first is less than the second*)
+    | _ -> pushError stk env (*If not enough elements push error to the stack*)
 
-let lessThan_ (stk: stack) (env : env_stack): stack * env_stack = 
-  match stk with
-    | Int a :: Int b :: rest -> pushBool (b < a) rest env 
-    | Float a :: Float b :: rest -> pushBool (b < a) rest env 
-    (* Mixed: Promote Int to Float *)
-    | Int a :: Float b :: rest -> pushBool (b < (float_of_int a)) rest env
-    | Float a :: Int b :: rest -> pushBool ((float_of_int b) < a) rest env
-    | _ -> pushError stk env 
 
-(* Recursive function to update a variable in the nearest scope it exists in *)
-(* NOTE: Only used for inOutFun parameters to support pass-by-reference-like behavior *)
+
+
 let rec update_env_stack (name : string) (value : stack_value) (env : env_stack) : env_stack =
   match env with
   | [] -> [] 
@@ -463,27 +462,27 @@ let end_ (stk: stack) (env: env_stack) : stack * env_stack =
 (*|               Part 3 Functions Code               |*) 
 (*-----------------------------------------------------*) 
 
-let funcNameValid (name : string) : bool =
-  let name = String.lowercase_ascii name in
-  not (List.mem name invalidName)
+let funcNameValid (name : string) : bool = (*Brayden Stille*)
+  let name = String.lowercase_ascii name in (*Convert the name to lowercase for case-insensitive comparison*)
+  not (List.mem name invalidName) (*Check if the name is not in the list of invalid names*)
 
-let capture_environment (env : env_stack) : (stack_value * stack_value) list list =
-  List.map (fun (e, _) -> e) env
+let capture_environment (env : env_stack) : (stack_value * stack_value) list list = (*Brayden Stille*)
+  List.map (fun (e, _) -> e) env (*Extracts only the environment part from each scope in the env_stack*)
 
-let reconstruct_environment (captured : (stack_value * stack_value) list list) : env_stack =
-  List.map (fun e -> (e, [])) captured
+let reconstruct_environment (captured : (stack_value * stack_value) list list) : env_stack = (*Aaron Massey*)
+  List.map (fun e -> (e, [])) captured (*Reconstructs the env_stack from the captured environment lists, initializing each stack as empty*)
 
-let rec extract_body (commands : string list) (acc : string list) (depth : int) : string list * string list =
+let rec extract_body (commands : string list) (acc : string list) (depth : int) : string list * string list = (*Aaron Massey*)
   match commands with
-  | [] -> (List.rev acc, []) 
+  | [] -> (List.rev acc, []) (*If there are no more commands, return the accumulated body and an empty list*)
   | cmd :: rest ->
-      let tokens = tokenize_command cmd in
+      let tokens = tokenize_command cmd in (*Tokenizes the current command*)
       match tokens with
-      | ["fun"; _] | ["inOutFun"; _] -> extract_body rest (cmd :: acc) (depth + 1) 
+      | ["fun"; _] | ["inOutFun"; _] -> extract_body rest (cmd :: acc) (depth + 1) (*If a nested function is found, increase depth and continue accumulating*)
       | ["funEnd"] -> 
-          if depth = 0 then (List.rev acc, rest)
-          else extract_body rest (cmd :: acc) (depth - 1)
-      | _ -> extract_body rest (cmd :: acc) depth
+          if depth = 0 then (List.rev acc, rest) (*If the depth is zero, return the accumulated body and the remaining commands*)
+          else extract_body rest (cmd :: acc) (depth - 1) (*If inside a nested function, decrease depth and continue accumulating*)
+      | _ -> extract_body rest (cmd :: acc) depth (*For other commands, continue accumulating without changing depth*)
 
 
 (*-----------------------------------------------------*) 
@@ -491,7 +490,7 @@ let rec extract_body (commands : string list) (acc : string list) (depth : int) 
 (*-----------------------------------------------------*) 
 
 
-let interpreter ( (input : string ), (output : string)) : unit = 
+let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey and Brayden Stille*) 
   let lines = read_lines input in
   let oc = open_out output in  
 
