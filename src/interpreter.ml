@@ -168,121 +168,117 @@ let pushUnit (stk : stack) (env : env_stack): stack * env_stack = (*Brayden Stil
   (Unit :: stk, env) (*Pushes a Unit onto the stack*)
 
 let push (arg : string) (stk : stack) (env : env_stack): stack * env_stack = (*Brayden Stille*)
-  if is_quoted_string arg then 
-    let s = String.sub arg 1 (String.length arg - 2) in 
-      pushStr s stk env 
+  if is_quoted_string arg then (*Checks if the argument is wrapped in quotes*)
+    let s = String.sub arg 1 (String.length arg - 2) in (*Removes the quotes from the argument*)
+      pushStr s stk env (*Calls the pushStr function with s as the string and the stack as stk*)
   else
-  match arg with 
-    | ":true:" -> pushBool true stk env 
-    | ":false:" -> pushBool false stk env 
-    | ":error:" -> pushError stk env 
-    | ":unit:" -> pushUnit stk env 
-    | arg when is_valid_int arg -> pushInt (int_of_string arg) stk env 
-    | arg when is_valid_float arg -> pushFloat (float_of_string arg) stk env 
-    | arg when is_valid_name arg -> pushName arg stk env
-    | _ -> pushError stk env 
+  match arg with (*matches the push function with the argument*)
+    | ":true:" -> pushBool true stk env(*Calls the pushBool function with true and the stack as stk*)
+    | ":false:" -> pushBool false stk env(*Calls the pushBool function with false and the stack as stk*)
+    | ":error:" -> pushError stk env(*Calls the pushError function with the stack as stk*)
+    | ":unit:" -> pushUnit stk env(*Calls the pushUnit function with the stack as stk*)
+    | arg when is_valid_name arg -> pushName arg stk env(*Calls the pushName function with arg as the name and the stack as stk*)
+    | arg when is_valid_int arg -> pushInt (int_of_string arg) stk env (*Calls the pushInt function with arg converted to an int and the stack as stk*)
+    | _ -> pushError stk env (*If the argument is not valid, calls the pushError function with the stack as stk*)
  
 
-let pop (stk: stack) (env : env_stack): stack * env_stack=  
+let pop (stk: stack) (env : env_stack): stack * env_stack = (*Aaron Massey*)
   match stk with                
-    | [] -> pushError stk env
-    | _ :: rest -> (rest, env) 
+    | [] -> pushError stk env (*If the stack is empty, push an error onto the stack*)
+    | _ :: rest -> (rest, env) (*Removes the top element from the stack and returns the rest of the stack*)
 
 
-let arithmetic (op : operation) (stk: stack) (env : env_stack) : stack * env_stack =  
+let arithmetic (op : operation) (stk: stack) (env : env_stack) : stack * env_stack = (*Aaron Massey*)
   match op with 
-    | Add -> ( 
+    | Add -> ( (*Addition Operation*)
       match stk with
-        | Int a :: Int b :: rest -> pushInt (b + a) rest env
-        | Float a :: Float b :: rest -> pushFloat (b +. a) rest env
-        (* Mixed: Promote Int to Float *)
-        | Int a :: Float b :: rest -> pushFloat (b +. float_of_int a) rest env
-        | Float a :: Int b :: rest -> pushFloat ((float_of_int b) +. a) rest env
-        | _ -> pushError stk env 
+        | Int a :: Int b :: rest -> pushInt (b + a) rest env (*Adds two integers and pushes the result onto the stack*)
+        | Float a :: Float b :: rest -> pushFloat (b +. a) rest env (*Adds two floats and pushes the result onto the stack*)
+       
+        | Int a :: Float b :: rest -> pushFloat (b +. float_of_int a) rest env (*Adds an integer and a float, promoting the integer to float, and pushes the result onto the stack*)
+        | Float a :: Int b :: rest -> pushFloat ((float_of_int b) +. a) rest env (*Adds a float and an integer, promoting the integer to float, and pushes the result onto the stack*)
+        | _ -> pushError stk env (*If the stack does not contain two numbers, push an error onto the stack*)
           )
-    | Sub -> (
+    | Sub -> ( (*Subtraction Operation*)
       match stk with
-      | Int a :: Int b :: rest -> pushInt (b - a) rest env 
-      | Float a :: Float b :: rest -> pushFloat (b -. a) rest env 
-      (* Mixed: Promote Int to Float *)
-      | Int a :: Float b :: rest -> pushFloat (b -. float_of_int a) rest env
-      | Float a :: Int b :: rest -> pushFloat ((float_of_int b) -. a) rest env
-      | _ -> pushError stk env 
+      | Int a :: Int b :: rest -> pushInt (b - a) rest env  (*Subtracts two integers and pushes the result onto the stack*)
+      | Float a :: Float b :: rest -> pushFloat (b -. a) rest env  (*Subtracts two floats and pushes the result onto the stack*)
+      
+      | Int a :: Float b :: rest -> pushFloat (b -. float_of_int a) rest env (*Subtracts an integer and a float, promoting the integer to float, and pushes the result onto the stack*)
+      | Float a :: Int b :: rest -> pushFloat ((float_of_int b) -. a) rest env (*Subtracts a float and an integer, promoting the integer to float, and pushes the result onto the stack*)
+      | _ -> pushError stk env (*If the stack does not contain two numbers, push an error onto the stack*)
     ) 
-    | Mult -> (
+    | Mult -> ( (*Multiplication Operation*)
       match stk with 
-        | Int a :: Int b :: rest -> pushInt (b * a) rest env  
-        | Float a :: Float b :: rest -> pushFloat (b *. a) rest env  
-        (* Mixed: Promote Int to Float *)
-        | Int a :: Float b :: rest -> pushFloat (b *. float_of_int a) rest env
-        | Float a :: Int b :: rest -> pushFloat ((float_of_int b) *. a) rest env
-        | _ -> pushError stk env 
+        | Int a :: Int b :: rest -> pushInt (b * a) rest env (*Multiplies two integers and pushes the result onto the stack*)
+        | Float a :: Float b :: rest -> pushFloat (b *. a) rest env (*Multiplies two floats and pushes the result onto the stack*)
+        
+        | Int a :: Float b :: rest -> pushFloat (b *. float_of_int a) rest env (*Multiplies an integer and a float, promoting the integer to float, and pushes the result onto the stack*)
+        | Float a :: Int b :: rest -> pushFloat ((float_of_int b) *. a) rest env (*Multiplies a float and an integer, promoting the integer to float, and pushes the result onto the stack*)
+        | _ -> pushError stk env (*If the stack does not contain two numbers, push an error onto the stack*)
     ) 
-    | Div -> (
+    | Div -> ( (*Division Operation*)
       match stk with
         | Int a :: Int b :: rest -> 
           if a = 0 then pushError (Int a :: Int b :: rest) env
-          else pushInt (b / a) rest env
+          else pushInt (b / a) rest env (*Divides two integers and pushes the result onto the stack*)
         | Float a :: Float b :: rest -> 
           if a = 0.0 then pushError (Float a :: Float b :: rest) env
-          else pushFloat (b /. a) rest env
-        (* Mixed: Promote Int to Float *)
+          else pushFloat (b /. a) rest env (*Divides two floats and pushes the result onto the stack*)
+        
         | Int a :: Float b :: rest -> 
-          if a = 0 then pushError (Int a :: Float b :: rest) env
-          else pushFloat (b /. float_of_int a) rest env
+          if a = 0 then pushError (Int a :: Float b :: rest) env (*Checks for division by zero when dividing an integer by a float and pushes an error onto the stack if true*)
+          else pushFloat (b /. float_of_int a) rest env (*Divides an integer and a float, promoting the integer to float, and pushes the result onto the stack*)
         | Float a :: Int b :: rest -> 
-          if a = 0.0 then pushError (Float a :: Int b :: rest) env
-          else pushFloat ((float_of_int b) /. a) rest env
-        | _ -> pushError stk env  
+          if a = 0.0 then pushError (Float a :: Int b :: rest) env (*Checks for division by zero when dividing a float by an integer and pushes an error onto the stack if true*)
+          else pushFloat ((float_of_int b) /. a) rest env (*Divides a float and an integer, promoting the integer to float, and pushes the result onto the stack*)
+        | _ -> pushError stk env  (*If the stack does not contain two numbers, push an error onto the stack*)
     ) 
-    | Rem ->  (
+    | Rem ->  ( (*Remainder Operation*)
       match stk with
         | Int a :: Int b :: rest -> 
-          if a = 0 then pushError (Int a :: Int b :: rest) env 
+          if a = 0 then pushError (Int a :: Int b :: rest) env (*Checks for division by zero when computing the remainder of two integers and pushes an error onto the stack if true*)
           else pushInt (b mod a) rest env 
         | Float a :: Float b :: rest -> 
-          if a = 0.0 then pushError (Float a :: Float b :: rest) env 
-          else pushFloat (mod_float b a) rest env 
-        (* Mixed: Promote Int to Float *)
+          if a = 0.0 then pushError (Float a :: Float b :: rest) env (*Checks for division by zero when computing the remainder of two floats and pushes an error onto the stack if true*)
+          else pushFloat (mod_float b a) rest env (*Computes the remainder of two floats and pushes the result onto the stack*)
+        
         | Int a :: Float b :: rest -> 
-          if a = 0 then pushError (Int a :: Float b :: rest) env
-          else pushFloat (mod_float b (float_of_int a)) rest env
+          if a = 0 then pushError (Int a :: Float b :: rest) env (*Checks for division by zero when computing the remainder of an integer and a float and pushes an error onto the stack if true*)
+          else pushFloat (mod_float b (float_of_int a)) rest env (*Computes the remainder of an integer and a float, promoting the integer to float, and pushes the result onto the stack*)
         | Float a :: Int b :: rest -> 
-          if a = 0.0 then pushError (Float a :: Int b :: rest) env
-          else pushFloat (mod_float (float_of_int b) a) rest env
-        | _ -> pushError stk env 
+          if a = 0.0 then pushError (Float a :: Int b :: rest) env (*Checks for division by zero when computing the remainder of a float and an integer and pushes an error onto the stack if true*)
+          else pushFloat (mod_float (float_of_int b) a) rest env (*Computes the remainder of a float and an integer, promoting the integer to float, and pushes the result onto the stack*)
+        | _ -> pushError stk env (*If the stack does not contain two numbers, push an error onto the stack*)
     )   
 
-let arithmetic_helper (op : operation) (stk: stack) (env : env_stack) : stack * env_stack =  
+let arithmetic_helper (op : operation) (stk: stack) (env : env_stack) : stack * env_stack = (*Brayden Stille*)
   match stk with 
-    | Int a :: Int b :: rest -> arithmetic op stk env 
-    | Float a :: Float b :: rest -> arithmetic op stk env 
-    (* Add Mixed cases to helper dispatch *)
-    | Int a :: Float b :: rest -> arithmetic op stk env
-    | Float a :: Int b :: rest -> arithmetic op stk env
-    | _ -> pushError stk env 
+    | Int a :: Int b :: rest -> arithmetic op stk env (*Both operands are Ints*)
+    | Float a :: Float b :: rest -> arithmetic op stk env (*Both operands are Floats*)
+    | Int a :: Float b :: rest -> arithmetic op stk env (*Mixed operands: Int and Float*)
+    | Float a :: Int b :: rest -> arithmetic op stk env (*Mixed operands: Float and Int*)
+    | _ -> pushError stk env (*If the stack does not contain two numbers, push an error onto the stack*)
   
-let sign (stk : stack) (env : env_stack): stack * env_stack = 
+let sign (stk : stack) (env : env_stack): stack * env_stack = (*Aaron Massey*)
   match stk with 
-    | Int a :: rest -> pushInt (a * -1) rest env 
-    | Float a :: rest -> pushFloat (a *. -1.0) rest env 
-    | _ -> pushError stk env 
+    | Int a :: rest -> pushInt (a * -1) rest env (*If there is an Int, multiply it by -1*)
+    | _ -> pushError stk env (*If there is no Int, push an error to the stack*)
 
-let swap (stk : stack) (env: env_stack): stack * env_stack = 
+let swap (stk : stack) (env: env_stack): stack * env_stack = (*Aaron Massey*)
   match stk with
-    | a :: b :: rest -> ((b :: a :: rest), env) 
-    | _ -> pushError stk env 
+    | a :: b :: rest -> ((b :: a :: rest), env)(*Swaps the top two elements of the stack*)
+    | _ -> pushError stk env (*If there are not enough elements to swap, push an error onto the stack*)
 
-let tostring (stk : stack) (env : env_stack): stack * env_stack = 
+let tostring (stk : stack) (env : env_stack): stack * env_stack = (*Brayden Stille*)
   match stk with
-    | [] -> pushError stk env 
-    | v :: rest -> pushStr (string_of_stack_value v) rest env 
+    | [] -> pushError stk env(*If the stack is empty, push an error onto the stack*)
+    | v :: rest -> pushStr (string_of_stack_value v) rest env (*Calls the pushStr function with the string representation of the top stack value*)
 
-let println (out : out_channel) (stk : stack) (env : env_stack) : stack*env_stack = 
+let println (out : out_channel) (stk : stack) (env : env_stack) : stack*env_stack = (*Aaron Massey*)
   match stk with
-    | [] -> pushError stk env 
-    | v :: rest -> Printf.fprintf out "%s\n" (string_of_stack_value v);
-      (rest, env) 
+    | [] -> pushError stk env (*If the stack is empty, push an error onto the stack*)
+    | v :: rest -> Printf.fprintf out "%s\n" (string_of_stack_value v); (rest, env) (*Calls the Printf.fprintf function to print the top stack value to the output channel*)
 
 (*-----------------------------------------------------*) 
 (*|               Part 2 Functions Code               |*) 
