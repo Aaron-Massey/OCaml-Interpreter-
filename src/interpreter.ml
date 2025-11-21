@@ -284,38 +284,41 @@ let println (out : out_channel) (stk : stack) (env : env_stack) : stack*env_stac
 (*|               Part 2 Functions Code               |*) 
 (*-----------------------------------------------------*) 
 
-let rec fetch_from_environment_list (name : string) (env_list : environment): stack_value = 
+let rec fetch_from_environment_list (name : string) (env_list : environment): stack_value = (*Aaron Massey*)
   match env_list with
-    | [] -> Error 
+    | [] -> Error (*If the name is not found push an error*)
     | (n, v) :: rest -> 
-          if string_of_stack_value n = name then v 
-          else fetch_from_environment_list name rest 
+          if string_of_stack_value n = name then v (*If the name is found, return the value*)
+          else fetch_from_environment_list name rest (*Otherwise, continue searching the rest of the environment list*)
 
-let rec fetch_from_env_stack (name : string) (env : env_stack): stack_value = 
+
+let rec fetch_from_env_stack (name : string) (env : env_stack): stack_value = (*Aaron Massey*)
   match env with
-  | [] -> Error 
+  | [] -> Error (* Searched all environments, not found *)
   | (current_scope, _) :: outer_scopes ->
       match fetch_from_environment_list name current_scope with
-      | Error -> fetch_from_env_stack name outer_scopes 
-      | value -> value 
+      | Error -> fetch_from_env_stack name outer_scopes (* Not in this scope, check outer *)
+      | value -> value (* Found in current scope, return value *)
 
-let rec check_environment_list (name : string) (env_list : environment): bool = 
+
+let rec check_environment_list (name : string) (env_list : environment): bool = (*Aaron Massey*)
   match env_list with
-    | [] -> false 
+    | [] -> false (*If the name is not found, return false*)
+    (*If the name is found, return true; otherwise, continue searching the rest of the environment list*)
     | (n, v) :: rest -> if string_of_stack_value n = name then true else check_environment_list name rest 
 
-let add_to_environment_list (name : stack_value) (value : stack_value) (env_list : environment): environment = 
-  (name, value) :: env_list 
+let add_to_environment_list (name : stack_value) (value : stack_value) (env_list : environment): environment = (*Aaron Massey*)
+  (name, value) :: env_list (*Adds a name-value pair to the environment list*)
 
-let remove_from_environment_list (name : stack_value) (env_list : environment): environment = 
-  let key = string_of_stack_value name in 
-  List.filter(fun(n,_) -> string_of_stack_value n <> key) env_list 
+let remove_from_environment_list (name : stack_value) (env_list : environment): environment = (*Aaron Massey*)
+  let key = string_of_stack_value name in (*Converts the name to a string*)
+  List.filter(fun(n,_) -> string_of_stack_value n <> key) env_list (*Removes the name-value pair from the environment list*)
 
-let replace_in_environment_list (name : stack_value) (value : stack_value) (env_list : environment): environment = 
-  let env_without_name = remove_from_environment_list name env_list in 
-  add_to_environment_list name value env_without_name 
 
-(* NEW: Only resolve the top N items. This prevents resolving Names that are intended for assignment deep in the stack. *)
+let replace_in_environment_list (name : stack_value) (value : stack_value) (env_list : environment): environment = (*Aaron Massey*)
+  let env_without_name = remove_from_environment_list name env_list in (*Removes the name-value pair from the environment list*)
+  add_to_environment_list name value env_without_name (*Adds the new name-value pair to the environment list*)
+
 let rec resolve_names stk env n =  
   if n <= 0 then stk
   else
@@ -464,15 +467,12 @@ let funcNameValid (name : string) : bool =
   let name = String.lowercase_ascii name in
   not (List.mem name invalidName)
 
-(* Extract the current environment to store in a closure *)
 let capture_environment (env : env_stack) : (stack_value * stack_value) list list =
   List.map (fun (e, _) -> e) env
 
-(* Reconstruct env_stack from captured environment list, assuming empty stacks for frames *)
 let reconstruct_environment (captured : (stack_value * stack_value) list list) : env_stack =
   List.map (fun e -> (e, [])) captured
 
-(* Helper to extract function body from the list of commands *)
 let rec extract_body (commands : string list) (acc : string list) (depth : int) : string list * string list =
   match commands with
   | [] -> (List.rev acc, []) 
@@ -495,7 +495,6 @@ let interpreter ( (input : string ), (output : string)) : unit =
   let lines = read_lines input in
   let oc = open_out output in  
 
-  (* UPDATED: exec_cmd now takes args_to_resolve count *)
   let exec_cmd ?(n_args=0) f (stk : stack) (env : env_stack) : (stack * env_stack) =
     let adjusted_stk = resolve_names stk env n_args in
     f adjusted_stk env
@@ -509,11 +508,10 @@ let interpreter ( (input : string ), (output : string)) : unit =
       let tokens = tokenize_command trimmed_cmd in 
       
       if tokens = ["quit"] then (stk, env)
-      else if tokens = ["return"] then (stk, env) (* Stop execution immediately *)
-      else if tokens = ["funEnd"] then (pushError stk env) (* Should not be encountered outside parsing *)
+      else if tokens = ["return"] then (stk, env)
+      else if tokens = ["funEnd"] then (pushError stk env)
       else
         
-        (* Handle Function Definitions *)
         match tokens with
         | ["fun"; args] | ["inOutFun"; args] -> 
              let parts = split_args args in
@@ -526,7 +524,6 @@ let interpreter ( (input : string ), (output : string)) : unit =
                       let captured_env_data = capture_environment env in 
                       let closure = Closure(funType, argName, body, captured_env_data) in
                       
-                      (* Bind closure to function name in CURRENT environment *)
                       let (current_scope, old_s) = List.hd env in
                       let new_scope = 
                         if check_environment_list funName current_scope then
@@ -536,7 +533,6 @@ let interpreter ( (input : string ), (output : string)) : unit =
                       in
                       let new_env = (new_scope, old_s) :: (List.tl env) in
                       
-                      (* Push Unit and continue with REMAINING commands *)
                       let (s, e) = pushUnit stk new_env in
                       execute remaining s e
                     else
@@ -547,54 +543,43 @@ let interpreter ( (input : string ), (output : string)) : unit =
                   let (s, e) = pushError stk env in 
                   execute rest s e
              )
-
-        (* Handle Function Call *)
         | ["call"] -> 
-             (* Call pops funName and arg. We resolve manually in the match below. *)
              let (call_stk, call_env) = exec_cmd ~n_args:0 (fun s e -> (s, e)) stk env in
              (match call_stk with
               | arg_item :: func_item :: stack_rest ->
-                  (* Resolve function to closure *)
                   let closure_val = resolve_val func_item call_env in
-                  (* Resolve argument to value *)
                   let arg_val = resolve_val arg_item call_env in
 
                  (match closure_val with
                    | Closure(ftype, paramName, body, saved_env_data) ->
                        if arg_val = Error then match pushError stk env with (s, e) -> execute rest s e
                        else
-                         (* Restore saved environment *)
                          let base_env = reconstruct_environment saved_env_data in
                          
-                         (* Add binding for formal parameter *)
                          let (top_scope, top_stack_ignore) = List.hd base_env in
                          let new_scope = add_to_environment_list (Name paramName) arg_val top_scope in
                          
-                         (* Create new execution environment with empty stack *)
                          let exec_env = (new_scope, []) :: (List.tl base_env) in
                          
                          let (res_stack, res_env) = execute body [] exec_env in
 
-                         (* Restore environment and stack. Push result (top of res_stack). *)
                          let ret_val = if res_stack = [] then Error else List.hd res_stack in
                          let restored_stack = ret_val :: stack_rest in
                          
-                         (* Handle InOutFun Update *)
                          let final_env = 
                            if ftype = "inOutFun" then
                              match arg_item with
-                             | Name actual_name_str -> 
-                                 (* Lookup formal param in the FUNCTION'S final environment *)
+                             | Name actual_name_str ->
                                  let final_param_val = fetch_from_env_stack paramName res_env in
                                  if final_param_val = Error then call_env
                                  else update_env_stack actual_name_str final_param_val call_env
-                             | _ -> call_env (* If arg was not a name, no update *)
+                             | _ -> call_env
                            else
                              call_env
                          in
                          execute rest restored_stack final_env
 
-                   | _ -> match pushError stk env with (s, e) -> execute rest s e (* Not a closure *)
+                   | _ -> match pushError stk env with (s, e) -> execute rest s e
                   )
               | _ -> match pushError stk env with (s, e) -> execute rest s e
              )
@@ -602,7 +587,6 @@ let interpreter ( (input : string ), (output : string)) : unit =
         | _ -> 
           let (new_stk, new_env) =
             match tokens with
-            (* PUSH, ASSIGN, LET, TOSTRING, PRINTLN MUST NOT RESOLVE NAMES *)
             | ["push"; arg] -> exec_cmd ~n_args:0 (push arg) stk env 
             | ["pop"] -> exec_cmd (pop) stk env 
             | ["add"] -> exec_cmd ~n_args:2 (arithmetic_helper Add) stk env 
@@ -621,7 +605,7 @@ let interpreter ( (input : string ), (output : string)) : unit =
             | ["equal"] -> exec_cmd ~n_args:2 (equal_) stk env 
             | ["lessThan"] -> exec_cmd ~n_args:2 (lessThan_) stk env 
             | ["assign"] -> exec_cmd ~n_args:0 (assign) stk env 
-            | ["if"] -> exec_cmd ~n_args:0 (if_) stk env (* if_ manually resolves 3rd arg *)
+            | ["if"] -> exec_cmd ~n_args:0 (if_) stk env
             | ["let"] -> exec_cmd ~n_args:0 (let_) stk env 
             | ["end"] -> exec_cmd ~n_args:0 (end_) stk env 
             | _ -> exec_cmd (pushError) stk env  
@@ -636,7 +620,7 @@ let interpreter ( (input : string ), (output : string)) : unit =
 (*-----------------------------------------------------*)
 
 
-let () =
+let () = (*Used to test outputs*)
   let directories = ["Part_1_Tests" ; "Part_2_Tests" ; "Part_3_Tests"] in
   let filenames = ["input1.txt";"input2.txt";"input3.txt";"input4.txt";"input5.txt";
                  "input6.txt";"input7.txt";"input8.txt";"input9.txt";"input10.txt"] in 
