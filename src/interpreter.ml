@@ -394,7 +394,7 @@ let rec update_env_stack (name : string) (value : stack_value) (env : env_stack)
             let updated_outer = update_env_stack name value outer_scopes in
             (current_scope, saved_stack) :: updated_outer
 
-(* Assign now works on the CURRENT scope only to support shadowing/let-binding behavior *)
+
 let assign (stk : stack) (env : env_stack) : stack * env_stack = 
   match stk with 
   | Name a :: Name n :: rest ->
@@ -618,7 +618,7 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
 (*|        Used directories to test program           |*)
 (*-----------------------------------------------------*)
 
-
+(*
 let () = (*Used to test outputs*)
   let directories = ["Part_1_Tests" ; "Part_2_Tests" ; "Part_3_Tests"] in
   let filenames = ["input1.txt";"input2.txt";"input3.txt";"input4.txt";"input5.txt";
@@ -633,3 +633,4 @@ let () = (*Used to test outputs*)
         Printf.printf "Warning: Skipping missing file %s\n" input_path
     ) filenames
   ) directories;
+  *)
