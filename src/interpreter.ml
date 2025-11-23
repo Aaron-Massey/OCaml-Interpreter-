@@ -403,28 +403,34 @@ let assign (stk : stack) (env : env_stack) : stack * env_stack =
      let value = fetch_from_env_stack a env in
      if value = Error then (pushError stk env) 
      else
-       let (current_scope, saved_stack) = List.hd env in
-       let new_scope = 
-         if check_environment_list n current_scope then
-           replace_in_environment_list (Name n) value current_scope
-         else
-           add_to_environment_list (Name n) value current_scope
-       in
-       let new_env = (new_scope, saved_stack) :: (List.tl env) in
-       (Unit::rest, new_env)
+       (match env with
+        | [] -> (pushError stk env)
+        | (current_scope, saved_stack) :: tl_env ->
+            let new_scope = 
+              if check_environment_list n current_scope then
+                replace_in_environment_list (Name n) value current_scope
+              else
+                add_to_environment_list (Name n) value current_scope
+            in
+            let new_env = (new_scope, saved_stack) :: tl_env in
+            (Unit::rest, new_env)
+       )
 
   | v :: Name n :: rest -> 
       (* Case 2: Assigning a Literal/Value (e.g., push x; push 5; assign) *)
       (* 'v' captures Int, Float, Bool, Str, Unit, Closure, or Error *)
-      let (current_scope, saved_stack) = List.hd env in
-      let new_scope = 
-        if check_environment_list n current_scope then
-          replace_in_environment_list (Name n) v current_scope
-        else
-          add_to_environment_list (Name n) v current_scope
-      in
-      let new_env = (new_scope, saved_stack) :: (List.tl env) in
-      (Unit::rest, new_env)
+      (match env with
+       | [] -> (pushError stk env)
+       | (current_scope, saved_stack) :: tl_env ->
+           let new_scope = 
+             if check_environment_list n current_scope then
+               replace_in_environment_list (Name n) v current_scope
+             else
+               add_to_environment_list (Name n) v current_scope
+           in
+           let new_env = (new_scope, saved_stack) :: tl_env in
+           (Unit::rest, new_env)
+      )
 
   | _ -> (pushError stk env)
 
