@@ -594,23 +594,7 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
                              let (s, e) = pushError stk env in
                              execute rest s e
                          )
-                         let (res_stack, res_env) = execute body [] exec_env in
-
-                         let ret_val = match res_stack with
-                         
-                         let final_env = 
-                           if ftype = "inOutFun" then
-                             match arg_item with
-                             | Name actual_name_str ->
-                                 let final_param_val = fetch_from_env_stack paramName res_env in
-                                 if final_param_val = Error then call_env
-                                 else update_env_stack actual_name_str final_param_val call_env
-                             | _ -> call_env
-                           else
-                             call_env
-                         in
-                         execute rest restored_stack final_env
-
+                         (* Unreachable and incomplete duplicate code block removed *)
                    | _ -> match pushError stk env with (s, e) -> execute rest s e
                   )
               | _ -> match pushError stk env with (s, e) -> execute rest s e
