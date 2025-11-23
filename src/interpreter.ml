@@ -263,7 +263,8 @@ let arithmetic_helper (op : operation) (stk: stack) (env : env_stack) : stack * 
 let sign (stk : stack) (env : env_stack): stack * env_stack = (*Aaron Massey*)
   match stk with 
     | Int a :: rest -> pushInt (a * -1) rest env (*If there is an Int, multiply it by -1*)
-    | _ -> pushError stk env (*If there is no Int, push an error to the stack*)
+    | Float a :: rest -> pushFloat (a *. -1.0) rest env (*If there is a Float, multiply it by -1.0*)
+    | _ -> pushError stk env (*If there is no Int or Float, push an error to the stack*)
 
 let swap (stk : stack) (env: env_stack): stack * env_stack = (*Aaron Massey*)
   match stk with
