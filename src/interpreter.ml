@@ -40,7 +40,7 @@ let invalidName = ["add" ; "sub" ; "pop" ; "push" ; "mult" ; "div" ; "push" ; "f
                   "int" ; "float" ; "str" ; "bool" ; "assign" ; "if" ;
                   "unit" ; "error" ; "rem" ; "name" ; "equal" ; "lessthan" ;
                   "swap" ; "sign" ; "tostring" ; "toString" ; "println" ; "let" ; "end" ;
-                  "cat" ; "fun" ; "funend" ; "return" ; "call" ; "inoutfun" 
+                  "cat" ; "fun" ; "funend" ; "return" ; "call" ; "inoutfun" ; "quit"
                   ] (*Aaron Massey*)
 
 (*-----------------------------------------------------*) 
