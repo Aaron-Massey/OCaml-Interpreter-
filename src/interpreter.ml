@@ -179,6 +179,7 @@ let push (arg : string) (stk : stack) (env : env_stack): stack * env_stack = (*B
     | ":unit:" -> pushUnit stk env(*Calls the pushUnit function with the stack as stk*)
     | arg when is_valid_name arg -> pushName arg stk env(*Calls the pushName function with arg as the name and the stack as stk*)
     | arg when is_valid_int arg -> pushInt (int_of_string arg) stk env (*Calls the pushInt function with arg converted to an int and the stack as stk*)
+    | arg when is_valid_float arg -> pushFloat (float_of_string arg) stk env (*Calls the pushFloat function with arg converted to a float and the stack as stk*)
     | _ -> pushError stk env (*If the argument is not valid, calls the pushError function with the stack as stk*)
  
 
