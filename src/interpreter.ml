@@ -565,11 +565,33 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
                        else
                          let base_env = reconstruct_environment saved_env_data in
                          
-                         let (top_scope, top_stack_ignore) = List.hd base_env in
-                         let new_scope = add_to_environment_list (Name paramName) arg_val top_scope in
-                         
-                         let exec_env = (new_scope, []) :: (List.tl base_env) in
-                         
+                         (match base_env with
+                         | (top_scope, top_stack_ignore) :: rest_env ->
+                             let new_scope = add_to_environment_list (Name paramName) arg_val top_scope in
+                             let exec_env = (new_scope, []) :: rest_env in
+                             
+                             let (res_stack, res_env) = execute body [] exec_env in
+
+                             let ret_val = if res_stack = [] then Error else List.hd res_stack in
+                             let restored_stack = ret_val :: stack_rest in
+                             
+                             let final_env = 
+                               if ftype = "inOutFun" then
+                                 match arg_item with
+                                 | Name actual_name_str ->
+                                     let final_param_val = fetch_from_env_stack paramName res_env in
+                                     if final_param_val = Error then call_env
+                                     else update_env_stack actual_name_str final_param_val call_env
+                                 | _ -> call_env
+                               else
+                                 call_env
+                             in
+                             execute rest restored_stack final_env
+                         | [] ->
+                             (* If base_env is empty, propagate an error *)
+                             let (s, e) = pushError stk env in
+                             execute rest s e
+                         )
                          let (res_stack, res_env) = execute body [] exec_env in
 
                          let ret_val = match res_stack with
