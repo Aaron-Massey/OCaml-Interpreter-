@@ -566,8 +566,7 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
                          
                          let (res_stack, res_env) = execute body [] exec_env in
 
-                         let ret_val = if res_stack = [] then Error else List.hd res_stack in
-                         let restored_stack = ret_val :: stack_rest in
+                         let ret_val = match res_stack with
                          
                          let final_env = 
                            if ftype = "inOutFun" then
