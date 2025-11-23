@@ -523,17 +523,21 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
                       let captured_env_data = capture_environment env in 
                       let closure = Closure(funType, argName, body, captured_env_data) in
                       
-                      let (current_scope, old_s) = List.hd env in
-                      let new_scope = 
-                        if check_environment_list funName current_scope then
-                          replace_in_environment_list (Name funName) closure current_scope
-                        else
-                          add_to_environment_list (Name funName) closure current_scope
-                      in
-                      let new_env = (new_scope, old_s) :: (List.tl env) in
-                      
-                      let (s, e) = pushUnit stk new_env in
-                      execute remaining s e
+                      (match env with
+                       | (current_scope, old_s) :: rest_env ->
+                           let new_scope = 
+                             if check_environment_list funName current_scope then
+                               replace_in_environment_list (Name funName) closure current_scope
+                             else
+                               add_to_environment_list (Name funName) closure current_scope
+                           in
+                           let new_env = (new_scope, old_s) :: rest_env in
+                           let (s, e) = pushUnit stk new_env in
+                           execute remaining s e
+                       | [] ->
+                           let (s, e) = pushError stk env in
+                           execute rest s e
+                      )
                     else
                       let (s, e) = pushError stk env in 
                       execute rest s e
