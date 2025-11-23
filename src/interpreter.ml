@@ -377,8 +377,8 @@ let lessThan_ (stk: stack) (env : env_stack): stack * env_stack = (*Brayden Stil
 
 let rec update_env_stack (name : string) (value : stack_value) (env : env_stack) : env_stack =
   match env with
-  | [] -> [] 
-  | (current_scope, saved_stack) :: outer_scopes ->
+  | [] -> [] (*If the stack is empty, return an empty stack *)
+  | (current_scope, saved_stack) :: outer_scopes -> 
       (* 1. Check if the variable is in the current scope *)
       if check_environment_list name current_scope then
         let new_scope = replace_in_environment_list (Name name) value current_scope in
@@ -499,96 +499,96 @@ let rec extract_body (commands : string list) (acc : string list) (depth : int) 
 
 
 let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey and Brayden Stille*) 
-  let lines = read_lines input in
-  let oc = open_out output in  
+  let lines = read_lines input in (*Read the file in*)
+  let oc = open_out output in  (*Open the output channel*)
 
-  let exec_cmd ?(n_args=0) f (stk : stack) (env : env_stack) : (stack * env_stack) =
-    let adjusted_stk = resolve_names stk env n_args in
+  let exec_cmd ?(n_args=0) f (stk : stack) (env : env_stack) : (stack * env_stack) = (*Run the commands using the proper number of args *)
+    let adjusted_stk = resolve_names stk env n_args in (*Resolve names *)
     f adjusted_stk env
   in
 
-  let rec execute (commands : string list) (stk : stack) (env : env_stack): stack * env_stack =
+  let rec execute (commands : string list) (stk : stack) (env : env_stack): stack * env_stack = (*Match the top stack item with a command and execute it*)
     match commands with
-    | [] -> (stk, env) 
-    | cmd :: rest -> 
-      let trimmed_cmd = String.trim cmd in 
-      let tokens = tokenize_command trimmed_cmd in 
+    | [] -> (stk, env) (*if it is empty, return the stack and environment*)
+    | cmd :: rest -> (* otherwise match the command *)
+      let trimmed_cmd = String.trim cmd in  (* Trim whitespace from the command *)
+      let tokens = tokenize_command trimmed_cmd in  (* Tokenize the command *)
       
-      if tokens = ["quit"] then (stk, env)
-      else if tokens = ["return"] then (stk, env)
-      else if tokens = ["funEnd"] then (pushError stk env)
+      if tokens = ["quit"] then (stk, env) (* If the command is to quit, then exit the interpreter *)
+      else if tokens = ["return"] then (stk, env) (* If the command is to return, then exit the interpreter level *)
+      else if tokens = ["funEnd"] then (pushError stk env) (* If funEnd is found outside of a function, push an error *)
       else
         
-        match tokens with
-        | (("fun" | "inOutFun") as funKind) :: args :: [] -> 
-             let parts = split_args args in
+        match tokens with (* If create function or call function, handle those cases *)
+        | (("fun" | "inOutFun") as funKind) :: args :: [] ->  (* if creating a function *)
+             let parts = split_args args in (* split the args into function name and argument name *)
              (match parts with
-              | [funName; argName] ->
+              | [funName; argName] -> (* if there are two parts, function name and argument name *)
                   begin
-                    if funcNameValid funName && funcNameValid argName then
-                      let (body, remaining) = extract_body rest [] 0 in
-                      let funType = if funKind = "inOutFun" then "inOutFun" else "fun" in
-                      let captured_env_data = capture_environment env in 
-                      let closure = Closure(funType, argName, body, captured_env_data) in
+                    if funcNameValid funName && funcNameValid argName then (* if both names are valid *)
+                      let (body, remaining) = extract_body rest [] 0 in (* Then extract the body of the function *)
+                      let funType = if funKind = "inOutFun" then "inOutFun" else "fun" in (* Set the function type *)
+                      let captured_env_data = capture_environment env in  (* Extract the captured environment *)
+                      let closure = Closure(funType, argName, body, captured_env_data) in (* create the closure *)
                       
-                      (match env with
-                       | (current_scope, old_s) :: rest_env ->
-                           let new_scope = 
-                             if check_environment_list funName current_scope then
-                               replace_in_environment_list (Name funName) closure current_scope
-                             else
+                      (match env with (*match the environment to add the function *)
+                       | (current_scope, old_s) :: rest_env -> (* if there is a current scope *)
+                           let new_scope =  (* create the new scope *)
+                             if check_environment_list funName current_scope then (* check if the function name already exists *)
+                               replace_in_environment_list (Name funName) closure current_scope (*if it does, replace it *)
+                             else (* otherwise, add it *)
                                add_to_environment_list (Name funName) closure current_scope
                            in
-                           let new_env = (new_scope, old_s) :: rest_env in
-                           let (s, e) = pushUnit stk new_env in
-                           execute remaining s e
-                       | [] ->
+                           let new_env = (new_scope, old_s) :: rest_env in (* Create the new environment *)
+                           let (s, e) = pushUnit stk new_env in (* Push unit onto the stack *)
+                           execute remaining s e (* Execute the remaining commands with the new stack and environment *)
+                       | [] -> (* if there is no current scope, push an error *)
                            let (s, e) = pushError stk env in
                            execute rest s e
                       )
-                    else
+                    else (*if either name is invalid, push an error *)
                       let (s, e) = pushError stk env in 
                       execute rest s e
                   end
-              | _ -> 
+              | _ -> (* otherwise, push an error *)
                   let (s, e) = pushError stk env in 
                   execute rest s e
              )
-        | ["call"] -> 
-             let (call_stk, call_env) = exec_cmd ~n_args:0 (fun s e -> (s, e)) stk env in
+        | ["call"] -> (*calling a function *)
+             let (call_stk, call_env) = exec_cmd ~n_args:0 (fun s e -> (s, e)) stk env in (* extract the stack and environment for the call *)
              (match call_stk with
-              | arg_item :: func_item :: stack_rest ->
-                  let closure_val = resolve_val func_item call_env in
-                  let arg_val = resolve_val arg_item call_env in
+              | arg_item :: func_item :: stack_rest -> (* if there are two items on the stack, the function and the argument *)
+                  let closure_val = resolve_val func_item call_env in (* convert the function item to a closure value *)
+                  let arg_val = resolve_val arg_item call_env in (* resolve the argument value *)
 
-                 (match closure_val with
-                   | Closure(ftype, paramName, body, saved_env_data) ->
-                       if arg_val = Error then match pushError stk env with (s, e) -> execute rest s e
+                 (match closure_val with (* match the closure value *)
+                   | Closure(ftype, paramName, body, saved_env_data) -> (* case it is a closure *)
+                       if arg_val = Error then match pushError stk env with (s, e) -> execute rest s e (* arg_val is error, push error *)
                        else
-                         let base_env = reconstruct_environment saved_env_data in
+                         let base_env = reconstruct_environment saved_env_data in (* Construct the base environment from the saved data *)
                          
-                         (match base_env with
-                         | (top_scope, top_stack_ignore) :: rest_env ->
-                             let new_scope = add_to_environment_list (Name paramName) arg_val top_scope in
-                             let exec_env = (new_scope, []) :: rest_env in
+                         (match base_env with (* match the base environment*)
+                         | (top_scope, top_stack_ignore) :: rest_env -> (* if there is a top scope *)
+                             let new_scope = add_to_environment_list (Name paramName) arg_val top_scope in (*set up the new scope with the parameter name and argument value *)
+                             let exec_env = (new_scope, []) :: rest_env in (* establish the execution environment *)
                              
-                             let (res_stack, res_env) = execute body [] exec_env in
+                             let (res_stack, res_env) = execute body [] exec_env in (* execute the function body *)
 
-                             let ret_val = if res_stack = [] then Error else List.hd res_stack in
-                             let restored_stack = ret_val :: stack_rest in
+                             let ret_val = if res_stack = [] then Error else List.hd res_stack in (*if the result stack is empty, return error, else return the top value *)
+                             let restored_stack = ret_val :: stack_rest in (* restore the stack with the return value on top *)
                              
-                             let final_env = 
-                               if ftype = "inOutFun" then
-                                 match arg_item with
-                                 | Name actual_name_str ->
-                                     let final_param_val = fetch_from_env_stack paramName res_env in
-                                     if final_param_val = Error then call_env
-                                     else update_env_stack actual_name_str final_param_val call_env
-                                 | _ -> call_env
+                             let final_env =  (* set up the final environment after function execution *)
+                               if ftype = "inOutFun" then (* if it is an inOutFun, update the environment *)
+                                 match arg_item with (* match the argument item *)
+                                 | Name actual_name_str -> (* if it is a name, fetch the final parameter value *)
+                                     let final_param_val = fetch_from_env_stack paramName res_env in (* set final parameter value *)
+                                     if final_param_val = Error then call_env (* if error, return the call environment *)
+                                     else update_env_stack actual_name_str final_param_val call_env (* otherwise, update the call environment *)
+                                 | _ -> call_env (*if not a name, return the call environment *)
                                else
                                  call_env
                              in
-                             execute rest restored_stack final_env
+                             execute rest restored_stack final_env (* execute the remaining commands with the restored stack and final environment *)
                          | [] ->
                              (* If base_env is empty, propagate an error *)
                              let (s, e) = pushError stk env in
@@ -601,7 +601,7 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
              )
 
         | _ -> 
-          let (new_stk, new_env) =
+          let (new_stk, new_env) = (* match with the rest of the commands *)
             match tokens with
             | ["push"; arg] -> exec_cmd ~n_args:0 (push arg) stk env 
             | ["pop"] -> exec_cmd (pop) stk env 
