@@ -518,14 +518,14 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
       else
         
         match tokens with
-        | ["fun"; args] | ["inOutFun"; args] -> 
+        | (("fun" | "inOutFun") as funKind) :: args :: [] -> 
              let parts = split_args args in
              (match parts with
               | [funName; argName] ->
                   begin
                     if funcNameValid funName && funcNameValid argName then
                       let (body, remaining) = extract_body rest [] 0 in
-                      let funType = if List.hd tokens = "inOutFun" then "inOutFun" else "fun" in
+                      let funType = if funKind = "inOutFun" then "inOutFun" else "fun" in
                       let captured_env_data = capture_environment env in 
                       let closure = Closure(funType, argName, body, captured_env_data) in
                       
