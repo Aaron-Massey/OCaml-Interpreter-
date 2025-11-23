@@ -39,7 +39,7 @@ type env_stack = (environment * stack) list
 let invalidName = ["add" ; "sub" ; "pop" ; "push" ; "mult" ; "div" ; "push" ; "fun" ; "funend" ; "and" ; "or" ; "not" ;
                   "int" ; "float" ; "str" ; "bool" ; "assign" ; "if" ;
                   "unit" ; "error" ; "rem" ; "name" ; "equal" ; "lessthan" ;
-                  "swap" ; "sign" ; "tostring" ; "println" ; "let" ; "end" ;
+                  "swap" ; "sign" ; "tostring" ; "toString" ; "println" ; "let" ; "end" ;
                   "cat" ; "fun" ; "funend" ; "return" ; "call" ; "inoutfun" 
                   ] (*Aaron Massey*)
 
