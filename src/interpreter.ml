@@ -269,7 +269,7 @@ let sign (stk : stack) (env : env_stack): stack * env_stack = (*Aaron Massey*)
 
 let swap (stk : stack) (env: env_stack): stack * env_stack = (*Aaron Massey*)
   match stk with
-    | a :: b :: rest -> ((b :: a :: rest), env)(*Swaps the top two elements of the stack*)
+    | a :: b :: rest -> ((b :: a :: rest), env) (*Swaps the top two elements of the stack*)
     | _ -> pushError stk env (*If there are not enough elements to swap, push an error onto the stack*)
 
 let tostring (stk : stack) (env : env_stack): stack * env_stack = (*Brayden Stille*)
