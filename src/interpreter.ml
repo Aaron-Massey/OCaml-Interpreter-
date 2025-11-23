@@ -36,9 +36,9 @@ type environment = var list
 
 type env_stack = (environment * stack) list 
 
-let invalidName = ["add" ; "sub" ; "pop" ; "push" ; "mult" ; "div" ; "push" ; "fun" ; "funEnd" ; "and" ; "or" ; "not" ;
+let invalidName = ["add" ; "sub" ; "pop" ; "push" ; "mult" ; "div" ; "push" ; "fun" ; "funend" ; "and" ; "or" ; "not" ;
                   "int" ; "float" ; "str" ; "bool" ; "assign" ; "if" ;
-                  "unit" ; "error" ; "rem" ; "name" ; "equal" ; "lessThan" ;
+                  "unit" ; "error" ; "rem" ; "name" ; "equal" ; "lessthan" ;
                   "swap" ; "sign" ; "tostring" ; "println" ; "let" ; "end" ;
                   "cat" ; "fun" ; "funend" ; "return" ; "call" ; "inoutfun" 
                   ] (*Aaron Massey*)
