@@ -36,12 +36,11 @@ type environment = var list
 
 type env_stack = (environment * stack) list 
 
-let invalidName = ["add" ; "sub" ; "pop" ; "push" ; "mult" ; "div" ; "push" ; "fun" ; "funend" ; "and" ; "or" ; "not" ;
+let invalidName = ["add" ; "sub" ; "pop" ; "push" ; "mult" ; "div" ; "push" ; "fun" ; "funEnd" ; "and" ; "or" ; "not" ;
                   "int" ; "float" ; "str" ; "bool" ; "assign" ; "if" ;
-                  "unit" ; "error" ; "rem" ; "name" ; "equal" ; "lessthan" ;
-                  "swap" ; "sign" ; "tostring" ; "toString" ; "println" ; "let" ; "end" ;
-                  "cat" ; "fun" ; "funend" ; "return" ; "call" ; "inoutfun" ; "quit"
-                  ] (*Aaron Massey*)
+                  "unit" ; "error" ; "rem" ; "name" ; "equal" ; "lessThan" ;
+                  "swap" ; "sign" ; "toString" ; "println" ; "let" ; "end" ;
+                  "cat" ; "fun" ; "funend" ; "return" ; "call" ; "inoutfun"; "quit"] (*Aaron Massey*)
 
 (*-----------------------------------------------------*) 
 (*|                  Type Validation                  |*) 
@@ -179,7 +178,6 @@ let push (arg : string) (stk : stack) (env : env_stack): stack * env_stack = (*B
     | ":unit:" -> pushUnit stk env (*Calls the pushUnit function with the stack as stk*)
     | arg when is_valid_name arg -> pushName arg stk env (*Calls the pushName function with arg as the name and the stack as stk*)
     | arg when is_valid_int arg -> pushInt (int_of_string arg) stk env (*Calls the pushInt function with arg converted to an int and the stack as stk*)
-    | arg when is_valid_float arg -> pushFloat (float_of_string arg) stk env (*Calls the pushFloat function with arg converted to a float and the stack as stk*)
     | _ -> pushError stk env (*If the argument is not valid, calls the pushError function with the stack as stk*)
  
 
@@ -264,12 +262,11 @@ let arithmetic_helper (op : operation) (stk: stack) (env : env_stack) : stack * 
 let sign (stk : stack) (env : env_stack): stack * env_stack = (*Aaron Massey*)
   match stk with 
     | Int a :: rest -> pushInt (a * -1) rest env (*If there is an Int, multiply it by -1*)
-    | Float a :: rest -> pushFloat (a *. -1.0) rest env (*If there is a Float, multiply it by -1.0*)
-    | _ -> pushError stk env (*If there is no Int or Float, push an error to the stack*)
+    | _ -> pushError stk env (*If there is no Int, push an error to the stack*)
 
 let swap (stk : stack) (env: env_stack): stack * env_stack = (*Aaron Massey*)
   match stk with
-    | a :: b :: rest -> ((b :: a :: rest), env) (*Swaps the top two elements of the stack*)
+    | a :: b :: rest -> ((b :: a :: rest), env)(*Swaps the top two elements of the stack*)
     | _ -> pushError stk env (*If there are not enough elements to swap, push an error onto the stack*)
 
 let tostring (stk : stack) (env : env_stack): stack * env_stack = (*Brayden Stille*)
@@ -328,8 +325,8 @@ let rec resolve_names stk env n =  (*Aaron Massey*)
   | [] -> [] (*If the stack is empty, return an empty list*)
   | hd :: tl -> (*Resolve the head and recurse on the tail*)
       let v = match hd with Name n -> fetch_from_env_stack n env | x -> x in (*Fetch the value from the environment if it's a Name*)
-      let v_res = if v = Error then (match hd with Name s -> Name s | _ -> hd) else v in (*If the value is Error and hd is a Name, keep it as Name; otherwise, keep hd as is. If not Error, use the resolved value*)
-      let final_v = v_res in (*Decide whether to keep the original Name or use the resolved value*)
+      let v_res = if v = Error then Name (match hd with Name s -> s | _ -> "") else v in (*If the value is Error, keep it as Name otherwise, use the resolved value*)
+      let final_v = if v = Error then hd else v_res in (*Decide whether to keep the original Name or use the resolved value*)
       final_v :: (resolve_names tl env (n - 1)) (*Recurse on the tail with decremented n*)
 
 let boolean_logic (op : boolean_op) (stk : stack) (env : env_stack): stack*env_stack = (*Brayden Stille*)
@@ -453,7 +450,6 @@ let end_ (stk: stack) (env: env_stack) : stack * env_stack = (*Aaron Massey*)
         | [] -> (Error :: stack_before_let, outer_env) (*If the stack is empty, push an error onto the stack before the let*)
         | top_val :: _ -> (top_val :: stack_before_let, outer_env) (*Push the top value of the current stack onto the stack before the let and return the outer environment*)
       )
-
 (*-----------------------------------------------------*) 
 (*|               Part 3 Functions Code               |*) 
 (*-----------------------------------------------------*) 
@@ -487,15 +483,15 @@ let rec extract_body (commands : string list) (acc : string list) (depth : int) 
 
 
 let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey and Brayden Stille*) 
-  let lines = read_lines input in (*Read the file in*)
-  let oc = open_out output in  (*Open the output channel*)
+  let lines = read_lines input in (*Reads the input file into a list of strings*)
+  let oc = open_out output in (*Opens the output file for writing*)
 
-  let exec_cmd ?(n_args=0) f (stk : stack) (env : env_stack) : (stack * env_stack) = (*Run the commands using the proper number of args *)
-    let adjusted_stk = resolve_names stk env n_args in (*Resolve names *)
-    f adjusted_stk env
+  let exec_cmd ?(n_args=0) f (stk : stack) (env : env_stack) : (stack * env_stack) =
+    let adjusted_stk = resolve_names stk env n_args in (*Resolves names in the stack based on the environment and number of arguments*)
+    f adjusted_stk env (*Applies the function f to the adjusted stack and environment*)
   in
 
-  let rec execute (commands : string list) (stk : stack) (env : env_stack): stack * env_stack = (*Match the top stack item with a command and execute it*)
+  let rec execute (commands : string list) (stk : stack) (env : env_stack): stack * env_stack = (*Aaron Massey and Brayden Stille*)
     match commands with
     | [] -> (stk, env) (*If it is empty, return the stack and environment*)
     | cmd :: rest -> (*Otherwise match the command *)
@@ -585,34 +581,34 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
                          )
                    | _ -> match pushError stk env with (s, e) -> execute rest s e
                   )
-              | _ -> match pushError stk env with (s, e) -> execute rest s e
+              | _ -> match pushError stk env with (s, e) -> execute rest s e (*If there are not enough elements on the stack for a function call, push an error onto the stack*)
              )
 
         | _ -> 
           let (new_stk, new_env) = (*match with the rest of the commands*)
             match tokens with
-            | ["push"; arg] -> exec_cmd ~n_args:0 (push arg) stk env 
-            | ["pop"] -> exec_cmd (pop) stk env 
-            | ["add"] -> exec_cmd ~n_args:2 (arithmetic_helper Add) stk env 
-            | ["sub"] -> exec_cmd ~n_args:2 (arithmetic_helper Sub) stk env 
-            | ["mult"] -> exec_cmd ~n_args:2 (arithmetic_helper Mult) stk env 
-            | ["div"] -> exec_cmd ~n_args:2 (arithmetic_helper Div) stk env 
-            | ["rem"] -> exec_cmd ~n_args:2 (arithmetic_helper Rem) stk env 
-            | ["sign"] -> exec_cmd ~n_args:1 (sign) stk env 
-            | ["swap"] -> exec_cmd (swap) stk env 
-            | ["toString"] -> exec_cmd ~n_args:0 (tostring) stk env 
-            | ["println"] -> exec_cmd ~n_args:0 (println oc) stk env  
-            | ["cat"] -> exec_cmd ~n_args:2 (cat) stk env 
-            | ["and"] -> exec_cmd ~n_args:2 (boolean_logic And) stk env 
-            | ["or"] -> exec_cmd ~n_args:2 (boolean_logic Or) stk env 
-            | ["not"] -> exec_cmd ~n_args:1 (boolean_logic Not) stk env 
-            | ["equal"] -> exec_cmd ~n_args:2 (equal_) stk env 
-            | ["lessThan"] -> exec_cmd ~n_args:2 (lessThan_) stk env 
-            | ["assign"] -> exec_cmd ~n_args:0 (assign) stk env 
-            | ["if"] -> exec_cmd ~n_args:0 (if_) stk env
-            | ["let"] -> exec_cmd ~n_args:0 (let_) stk env 
-            | ["end"] -> exec_cmd ~n_args:0 (end_) stk env 
-            | _ -> exec_cmd (pushError) stk env  
+            | ["push"; arg] -> exec_cmd ~n_args:0 (push arg) stk env (*Calls the push function*)
+            | ["pop"] -> exec_cmd (pop) stk env (*Calls the pop function*)
+            | ["add"] -> exec_cmd ~n_args:2 (arithmetic_helper Add) stk env (*Calls the arithmetic_helper with the Add operation*)
+            | ["sub"] -> exec_cmd ~n_args:2 (arithmetic_helper Sub) stk env (*Calls the arithmetic_helper with the Sub operation*)
+            | ["mult"] -> exec_cmd ~n_args:2 (arithmetic_helper Mult) stk env (*Calls the arithmetic_helper with the Mult operation*)
+            | ["div"] -> exec_cmd ~n_args:2 (arithmetic_helper Div) stk env (*Calls the arithmetic_helper with the Div operation*)
+            | ["rem"] -> exec_cmd ~n_args:2 (arithmetic_helper Rem) stk env (*Calls the arithmetic_helper with the Rem operation*)
+            | ["sign"] -> exec_cmd ~n_args:1 (sign) stk env (*Calls the sign function*)
+            | ["swap"] -> exec_cmd (swap) stk env (*Calls the swap function*)
+            | ["toString"] -> exec_cmd ~n_args:0 (tostring) stk env (*Calls the tostring function*)
+            | ["println"] -> exec_cmd ~n_args:0 (println oc) stk env  (*Calls the println function*)
+            | ["cat"] -> exec_cmd ~n_args:2 (cat) stk env (*Calls the cat function*)
+            | ["and"] -> exec_cmd ~n_args:2 (boolean_logic And) stk env (*Calls the boolean_logic with the And operation*)
+            | ["or"] -> exec_cmd ~n_args:2 (boolean_logic Or) stk env (*Calls the boolean_logic with the Or operation*)
+            | ["not"] -> exec_cmd ~n_args:1 (boolean_logic Not) stk env (*Calls the boolean_logic with the Not operation*)
+            | ["equal"] -> exec_cmd ~n_args:2 (equal_) stk env (*Calls the equal_ function*)
+            | ["lessThan"] -> exec_cmd ~n_args:2 (lessThan_) stk env (*Calls the lessThan_ function*)
+            | ["assign"] -> exec_cmd ~n_args:0 (assign) stk env (*Calls the assign function*)
+            | ["if"] -> exec_cmd ~n_args:0 (if_) stk env (*Calls the if_ function*)
+            | ["let"] -> exec_cmd ~n_args:0 (let_) stk env (*Calls the let_ function*)
+            | ["end"] -> exec_cmd ~n_args:0 (end_) stk env (*Calls the end_ function*)
+            | _ -> exec_cmd (pushError) stk env  (*If command is not recognized; pushError function is called*)
           in
           execute rest new_stk new_env 
   in
@@ -624,6 +620,8 @@ let interpreter ( (input : string ), (output : string)) : unit = (*Aaron Massey 
 (*-----------------------------------------------------*)
 
 (*
+  
+
 let () = (*Used to test outputs*)
   let directories = ["Part_1_Tests" ; "Part_2_Tests" ; "Part_3_Tests"] in
   let filenames = ["input1.txt";"input2.txt";"input3.txt";"input4.txt";"input5.txt";
@@ -638,4 +636,5 @@ let () = (*Used to test outputs*)
         Printf.printf "Warning: Skipping missing file %s\n" input_path
     ) filenames
   ) directories;
+  
 *)
